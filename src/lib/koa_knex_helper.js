@@ -155,7 +155,7 @@ class KoaKnexHelper {
 
           const coaliseWhere = this.coaliseWhere[`${m[2]}`];
           if (coaliseWhere) {
-            this.res.whereRaw(`${coaliseWhere} ${sign} ?`, [value]);
+            this.res.whereRaw(`${coaliseWhere} ${sign} _value`, { ...this.coaliseWhereReplacements, _value: value });
           } else {
             this.res.where(`${m[2]}`, sign, value);
           }
