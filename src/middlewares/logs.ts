@@ -1,51 +1,78 @@
 import { Routings } from 'the-api-routings';
+import type { Next } from 'hono';
+import type { AppContext } from '../types';
 
-const hideObjectValues = (obj: any) => {
-  if (!obj) return;
+const HIDDEN_FIELDS = ['password', 'token', 'refresh', 'authorization'];
 
-  const fieldsToHide = ['password', 'token', 'refresh', 'authorization'];
-  for (const key of fieldsToHide) if (typeof obj[key] !== 'undefined') obj[key] = '<hidden>';
-}
-
-const logFn = ({ id, startTime, method, path }: any) => (...toLog: any) => {
-  const date = new Date();
-  const ms = +date - +startTime;
-  for (const line of toLog) {
-    const isPlainMessage = line instanceof Error || typeof line !== 'object';
-    const logData = isPlainMessage ? line : JSON.stringify(line);
-    console.log(`[${date.toISOString()}] [${id}] [${method}] [${path}] [${ms}] ${logData}`);
+const hideObjectValues = (obj: unknown): void => {
+  if (!obj || typeof obj !== 'object') return;
+  for (const key of HIDDEN_FIELDS) {
+    if (key in (obj as Record<string, unknown>)) {
+      (obj as Record<string, unknown>)[key] = '<hidden>';
+    }
   }
-}
+};
 
-const logMiddleware = async (c: any, n: any) => {
+const createLogger =
+  ({
+    id,
+    startTime,
+    method,
+    path,
+  }: {
+    id: string;
+    startTime: Date;
+    method: string;
+    path: string;
+  }) =>
+  (...toLog: unknown[]) => {
+    const date = new Date();
+    const ms = +date - +startTime;
+    for (const line of toLog) {
+      const isPlain = line instanceof Error || typeof line !== 'object';
+      const data = isPlain ? line : JSON.stringify(line);
+      console.log(
+        `[${date.toISOString()}] [${id}] [${method}] [${path}] [${ms}] ${data}`,
+      );
+    }
+  };
+
+const logMiddleware = async (c: AppContext, n: Next) => {
   const startTime = new Date();
   const { method, headers } = c.req.raw;
   const id = Math.random().toString(36).substring(2, 10);
   c.set('logId', id);
 
   const { path } = c.req;
-
-  c.env.log = logFn({ id, startTime, method, path });
+  c.set('log', createLogger({ id, startTime, method, path }));
 
   const ip = c.env?.ip?.address;
   const query = c.req.query();
-  const body = headers.get('content-type') === 'application/json' ? await c.req.json() : await c.req.text();
+  const body =
+    headers.get('content-type') === 'application/json'
+      ? await c.req.json()
+      : await c.req.text();
 
   hideObjectValues(query);
   hideObjectValues(body);
 
-  c.env.log('[begin]', { headers, query, body, ip, method, path });
+  c.var.log('[begin]', { headers, query, body, ip, method, path });
 
   await n();
 
-  const result = c.var.result ? { ...c.var.result } : '';
+  const result = c.var.result
+    ? { ...(c.var.result as Record<string, unknown>) }
+    : '';
   hideObjectValues(result);
 
-  const responseSizeOnly = `${process.env.LOGS_SHOW_RESPONSE_SIZE_ONLY}` === 'true';
-  const response = responseSizeOnly ? `${JSON.stringify(result).length}b` : result;
+  const responseSizeOnly =
+    `${process.env.LOGS_SHOW_RESPONSE_SIZE_ONLY}` === 'true';
+  const response = responseSizeOnly
+    ? `${JSON.stringify(result).length}b`
+    : result;
 
-  c.env.log(response, '[end]');
-}
+  c.var.log(response, '[end]');
+};
 
 const logs = new Routings();
 logs.use('*', logMiddleware);

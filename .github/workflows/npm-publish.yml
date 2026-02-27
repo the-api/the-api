@@ -1,0 +1,83 @@
+name: Test and Publish
+
+on:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Start test services
+        run: docker compose -f test/docker-compose.yml up -d
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            if docker exec the_api_postgres_test pg_isready -U postgres -d postgres; then
+              echo "Postgres is ready"
+              exit 0
+            fi
+
+            echo "Waiting for Postgres... ($i/30)"
+            sleep 2
+          done
+
+          echo "Postgres did not become ready in time"
+          docker compose -f test/docker-compose.yml logs
+          exit 1
+
+      - name: Run tests
+        run: bun test
+
+      - name: Stop test services
+        if: always()
+        run: docker compose -f test/docker-compose.yml down
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js for npm registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build package
+        run: bun run build
+
+      - name: Publish to npm
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

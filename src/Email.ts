@@ -1,12 +1,12 @@
 import * as nodemailer from 'nodemailer';
 import * as Handlebars from 'handlebars';
-import { EmailParamsType } from './types';
+import type { EmailParamsType, EmailConfig } from './types';
 
 export class Email {
-  transport: any;
-  message: any;
+  private transport: nodemailer.Transporter;
+  private from: string;
 
-  constructor(options?) {
+  constructor(config?: EmailConfig) {
     const {
       EMAIL_USER: user,
       EMAIL_PASSWORD: pass,
@@ -16,33 +16,36 @@ export class Email {
       EMAIL_SECURE: isSecure,
       EMAIL_TLS_REJECTUNAUTH: rejectUnauth,
     } = process.env;
-    
-    const auth = { user, pass };
-    const secure = isSecure && isSecure === 'true';
-    const tls = rejectUnauth && { rejectUnauthorized: rejectUnauth === 'true' };
-    
-    const config = options || {
-      auth, from, host, port, secure, tls,
+
+    const envConfig: EmailConfig = {
+      auth: { user, pass },
+      from,
+      host,
+      port: port ? parseInt(port, 10) : undefined,
+      secure: isSecure === 'true',
+      tls:
+        rejectUnauth !== undefined
+          ? { rejectUnauthorized: rejectUnauth === 'true' }
+          : undefined,
     };
 
-    this.transport = nodemailer.createTransport(config);
-    this.message = {
-      from: from || config.auth.user,
-    };
+    const finalConfig = config || envConfig;
+    this.transport = nodemailer.createTransport(
+      finalConfig as nodemailer.TransportOptions,
+    );
+    this.from = finalConfig.from || finalConfig.auth?.user || '';
   }
 
   async send({
-    to, subject, text, html,
-  }: EmailParamsType) {
-    const message = {
-      ...this.message, to, subject, text, html,
-    };
-    return new Promise((resolve, reject) => {
-      this.transport.sendMail(message, (err, info) => (err ? reject(err) : resolve(info)));
-    });
+    to,
+    subject,
+    text,
+    html,
+  }: Pick<EmailParamsType, 'to' | 'subject' | 'text' | 'html'>): Promise<nodemailer.SentMessageInfo> {
+    return this.transport.sendMail({ from: this.from, to, subject, text, html });
   }
 
-  getPreparedData(template, params = {}) {
-    return Handlebars.compile(template || '')(params || {});
+  compile(template: string | undefined, data: Record<string, unknown> = {}): string {
+    return Handlebars.compile(template || '')(data);
   }
 }

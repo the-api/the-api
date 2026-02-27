@@ -53,11 +53,11 @@ router.crud({
   ]
 });
 router.get('/testWhereBindings', async (c, n) => {
-  c.env._typeName = 'type1';
+  c.set('_typeName' as any, 'type1');
   await n();
 });
 router.get('/testWhereBindings/:id', async (c, n) => {
-  c.env._typeName = 'type2';
+  c.set('_typeName' as any, 'type2');
   await n();
 });
 router.crud({

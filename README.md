@@ -1,4 +1,13 @@
-# moduler
+# the-api
+
+## Example
+
+```typescript
+import { TheAPI } from 'the-api';
+
+const theAPI = new TheAPI();
+export default theAPI.up();
+```
 
 To install dependencies:
 
@@ -20,7 +29,7 @@ const router = new Routings();
 
 router.post('/data/:id', async (c: Context) => {
   const body = await c.req.json();
-  c.env.log('incoming data', body);
+  c.var.log('incoming data', body);
 
   c.set('result', {...c.req.param(), token: 'xxx', refresh: 'yyy'});
 });
@@ -149,7 +158,7 @@ const router = new Routings();
 
 router.post('/data/:id', async (c: Context) => {
   const body = await c.req.json();
-  c.env.log('incoming data', body);
+  c.var.log('incoming data', body);
 
   c.set('result', {...c.req.param(), token: 'xxx', refresh: 'yyy'});
 });
@@ -181,7 +190,7 @@ after begin you can see information about request
 
 The following keys will mark as hidden: 'password', 'token', 'refresh', 'authorization'
 
-you can use `c.env.log()` to add any info to logs
+you can use `c.var.log()` to add any info to logs
 
 ## Error middleware
 

@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import type { Context } from 'hono';
 import { getTestClient } from './lib';
 import { Routings, TheAPI } from '../src';
 import { errors } from '../src/middlewares';
@@ -10,11 +9,11 @@ router.get('/exception', async (c: any) => {
   c.this.line.throws.error();
 });
 
-router.get('/error', async (c: Context) => {
+router.get('/error', async () => {
   throw new Error('throw error');
 });
 
-router.get('/user-defined-error', async (c: Context) => {
+router.get('/user-defined-error', async () => {
   throw new Error('USER_DEFINED_ERROR');
 });
 

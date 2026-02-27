@@ -1,42 +1,29 @@
 import { Routings } from 'the-api-routings';
+import { Files } from '../Files';
+import type { Next } from 'hono';
+import type { AppContext } from '../types';
 
-const fileErrors = {
-    DEFAULT: {
-        code: 11,
-        status: 500,
-        description: 'An unexpected error occurred',
-    },
-    NOT_FOUND: {
-        code: 21,
-        status: 404,
-        description: 'Not found',
-    },
-};
+let filesInstance: Files | null = null;
 
-const filesMiddleware = async (c: any, next: any) => {
-    const dateBegin = new Date();
-
-    c.env.log = console.log;
-    c.env.error = (...err: any) => {
-        c.set('result', { error: true })
-        console.error(...err);
-    }
-
-    await next();
-
-    if (!c.var.result) c.env.error({ message: 'NOT_FOUND' });
-    const { result, meta, logId } = c.var;
-
-    const { error } = result;
-    const date = new Date();
-    const serverTime = date.toISOString();
-    const requestTime = +date - +dateBegin;
-
-    return c.json({ result, meta, error, requestTime, serverTime, logId });
+const filesMiddleware = async (c: AppContext, next: Next) => {
+  if (!filesInstance) filesInstance = new Files();
+  c.set('files', filesInstance);
+  await next();
 };
 
 const filesRoute = new Routings();
 filesRoute.use('*', filesMiddleware);
-filesRoute.errors(fileErrors);
+filesRoute.errors({
+  FILES_NO_STORAGE_CONFIGURED: {
+    code: 131,
+    status: 500,
+    description: 'No file storage configured (set FILES_FOLDER or MINIO_*)',
+  },
+  FILES_NO_MINIO_CONFIGURED: {
+    code: 132,
+    status: 500,
+    description: 'MinIO is not configured for this operation',
+  },
+});
 
-export { filesRoute };
+export { filesRoute as files };
