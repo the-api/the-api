@@ -199,7 +199,11 @@ export class TheAPI {
 
   private registerRoutes(): void {
     const rolesRoute = new Routings();
-    if (this.roles) rolesRoute.use('*', this.roles.rolesMiddleware);
+    if (this.roles) {
+      rolesRoute.use('*', this.roles.rolesMiddleware);
+      this.roles.routePermissions = {};
+    }
+
     const app = this.app as any;
 
     const routesArr = [
