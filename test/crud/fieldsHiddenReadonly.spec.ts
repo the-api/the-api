@@ -28,7 +28,7 @@ describe('Hidden and Readonly Fields', () => {
     });
   });
 
-  describe('hidden', () => {
+  describe('hidden files', () => {
     test('GET /testNews', async () => {
       const { result, meta } = await client.get('/testNews?_sort=id');
       expect(meta.total).toEqual(2);

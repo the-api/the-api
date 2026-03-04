@@ -48,7 +48,12 @@ describe('Hidden', () => {
 
   describe('root token', () => {
     test('GET /testNews', async () => {
-      const { result, meta } = await client.get('/testNews?_sort=id', tokens.root);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { result, meta, ...rest } = await client.get('/testNews?_sort=id', tokens.root);
+console.log('!!!!!!!!!!!');
+console.log('!!!!!!!!!!!');
+console.log('!!!!!!!!!!!');
+console.log({ result, meta, rest });
       expect(meta.total).toEqual(2);
       expect(result[0].timeCreated).not.toEqual(undefined);
     });
