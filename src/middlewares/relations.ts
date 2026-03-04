@@ -35,7 +35,7 @@ const relationsMiddleware = async (c: AppContext, next: Next) => {
 
     if (!ids.length) return;
 
-    for (const item of Object.entries(relationsData as Record<string, CrudBuilderOptionsType>)) await findRelations(item);
+    // for (const item of Object.entries(relationsData as Record<string, CrudBuilderOptionsType>)) await findRelations(item);
 
     const idName = definition.relationIdName || 'id';
     const { result: data } = await crud.getRequestResult(c, {

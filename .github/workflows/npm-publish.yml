@@ -44,7 +44,7 @@ jobs:
           exit 1
 
       - name: Run tests
-        run: bun test
+        run: bun test --preload ./test/init.ts
 
       - name: Stop test services
         if: always()

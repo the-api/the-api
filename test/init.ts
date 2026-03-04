@@ -1,11 +1,14 @@
 import { beforeAll, afterAll, mock } from 'bun:test';
-import { getTestClient } from './lib';
+import type { TestClient } from './lib';
 
-const c = await getTestClient();
+let c: TestClient;
 
 mock.module('nodemailer', () => ({
-  createTransport: () => ({ sendMail: (data) => { c.storeValue('email', data) } }),
+  createTransport: () => ({ sendMail: (data: unknown) => { c?.storeValue('email', data); } }),
 }));
+
+const { getTestClient } = await import('./lib');
+c = await getTestClient();
 
 beforeAll(async () => {
   await c.deleteTables();
