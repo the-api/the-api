@@ -21,7 +21,9 @@ describe('GET after', () => {
       await client.post('/testTypes', { name: 'type1' });
       await client.post('/testTypes', { name: 'type2' });
       await client.post('/testNews', { name: 'test111', typeId: 1 });
+      await new Promise(resolve => setTimeout(resolve, 10));
       await client.post('/testNews', { name: 'test112', typeId: 1, timePublished: DateTime.local().setZone('America/New_York').toString()});
+      await new Promise(resolve => setTimeout(resolve, 10));
       await client.post('/testNews', { name: 'test222', typeId: 2 });
     });
   });
