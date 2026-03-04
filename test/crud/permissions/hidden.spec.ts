@@ -18,7 +18,7 @@ router.crud({
   hiddenFields: ['timeCreated', 'views'],
 
   permissions: {
-    owner: ['testNews.getViews'],
+    owner: ['testNews.getFullInfo'],
 
     fields: {
       viewable: {
@@ -41,19 +41,22 @@ describe('Hidden', () => {
     });
 
     test('create testNews', async () => {
-      await client.post('/testNews', { name: 'test111', timePublished: 'NOW()', timeDeleted: 'NOW()' });
-      await client.post('/testNews', { name: 'test112', views: 100, timeCreated: DateTime.fromISO('2024-06-01').toString() });
+      await client.post('/testNews', { name: 'test111', timePublished: 'NOW()', timeDeleted: 'NOW()' }, tokens.root);
+      await client.post('/testNews', { name: 'test112', views: 100, timeCreated: DateTime.fromISO('2024-06-01').toString() }, tokens.root);
     });
   });
 
   describe('root token', () => {
+    test('GET /testNews by nobody', async () => {
+      const { result, meta } = await client.get('/testNews?_sort=id');
+
+      expect(meta.total).toEqual(2);
+      expect(result[0].timeCreated).toEqual(undefined);
+    });
+
     test('GET /testNews', async () => {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const { result, meta, ...rest } = await client.get('/testNews?_sort=id', tokens.root);
-console.log('!!!!!!!!!!!');
-console.log('!!!!!!!!!!!');
-console.log('!!!!!!!!!!!');
-console.log({ result, meta, rest });
+      const { result, meta } = await client.get('/testNews?_sort=id', tokens.root);
+
       expect(meta.total).toEqual(2);
       expect(result[0].timeCreated).not.toEqual(undefined);
     });
@@ -143,8 +146,14 @@ console.log({ result, meta, rest });
 
     test('GET /testNews/3', async () => {
       const { result } = await client.get('/testNews/3', tokens.noRole);
-      expect(result.timeCreated).toEqual(undefined);
+      expect(result.timeCreated).not.toEqual(undefined);
       expect(result.views).not.toEqual(undefined);
+    });
+
+    test('GET /testNews/3 by nobody', async () => {
+      const { result } = await client.get('/testNews/3');
+      expect(result.timeCreated).toEqual(undefined);
+      expect(result.views).toEqual(undefined);
     });
   });
 
