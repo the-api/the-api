@@ -68,11 +68,12 @@ export class TheAPI {
   }
 
   async up() {
-    await this.init();
+    const { port } = await this.upBun();
+    console.log(`Server is running on port ${port}`);
     return serve({
       fetch: (req) =>
         this.app.fetch(req, { ip: req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') }),
-      port: this.port,
+      port,
     });
   }
 

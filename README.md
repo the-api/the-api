@@ -3,39 +3,60 @@
 ## Example
 
 ```typescript
-import { TheAPI } from 'the-api';
-
-const theAPI = new TheAPI();
-export default theAPI.up();
-```
-
-To install dependencies:
-
-```bash
-bun install
-```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-
-```typescript
-import { status } from '../extensions';
+import { Routings, TheAPI } from 'the-api';
 
 const router = new Routings();
 
-router.post('/data/:id', async (c: Context) => {
-  const body = await c.req.json();
-  c.var.log('incoming data', body);
-
-  c.set('result', {...c.req.param(), token: 'xxx', refresh: 'yyy'});
+router.get('/data/:id', async (c) => { // hono routing
+  const { id } = c.req.param();        // get route parameter
+  c.set('result', { id, foo: 'bar' }); // set response result
 });
 
-const theAPI = new TheAPI({ routings: [logs, status, router] });
-export default theAPI.up();
+const theAPI = new TheAPI({ routings: [router] });
+
+await theAPI.up(); // use with node
+
+// export default await theAPI.upBun(); // ...or use with bun
+```
+
+### Request and response
+
+```
+curl http://localhost:7788/data/123
+```
+
+```json
+{
+    "result": {
+        "id": "123",
+        "foo": "bar"
+    },
+    "error": false,
+    "requestTime": 4,
+    "serverTime": "2026-03-05T13:47:54.709Z"
+}
+```
+
+### Error example
+
+```
+curl http://localhost:7788/d
+```
+
+```json
+{
+    "result": {
+        "error": true,
+        "code": 21,
+        "status": 404,
+        "description": "Not found",
+        "name": "NOT_FOUND",
+        "additional": ""
+    },
+    "error": true,
+    "requestTime": 2,
+    "serverTime": "2026-03-05T13:48:42.543Z"
+}
 ```
 
 ## .env
@@ -67,6 +88,229 @@ example:
 - `requestTime`: Time spent on the server to process the request, in milliseconds.
 - `serverTime`: Current server time.
 - `logId`: Request's log ID (used in `logs` middleware).
+
+## Middlewares
+
+### logs
+
+`logs` middleware logs all requests and responses with unique request id, method, path, time on server, log information
+
+data and time, unique request id, method, path, time on server, log information
+
+each request starts with [begin] and ends with [end]
+
+after begin you can see information about request
+
+The following keys will mark as hidden: 'password', 'token', 'refresh', 'authorization'
+
+you can use `c.var.log()` to add any info to logs
+
+```javascript
+import { Routings, TheAPI, middlewares } from 'the-api';
+
+const router = new Routings();
+
+router.get('/data/:id', async (c) => {
+  c.var.log(c.req.param());
+  c.set('result', { foo: 'bar' });
+});
+
+const theAPI = new TheAPI({
+  routings: [
+    middlewares.logs, // logs middleware
+    router,
+  ]
+});
+
+await theAPI.up();
+```
+
+```
+curl http://localhost:7788/data/123
+```
+
+Output:
+
+```
+[2026-03-05T15:33:14.727Z] [j9szsmhn] [GET] [/data/123] [1] [begin]
+[2026-03-05T15:33:14.727Z] [j9szsmhn] [GET] [/data/123] [1] {"headers":{"host":"localhost:7788","user-agent":"curl/7.68.0","accept":"*/*"},"query":{},"body":"","method":"GET","path":"/data/123"}
+[2026-03-05T15:33:14.728Z] [j9szsmhn] [GET] [/data/123] [2] params: [object Object]
+[2026-03-05T15:33:14.728Z] [j9szsmhn] [GET] [/data/123] [2] {"foo":"bar"}
+[2026-03-05T15:33:14.728Z] [j9szsmhn] [GET] [/data/123] [2] [end]
+```
+
+### errors
+
+Every exception generates error response with `error` flag set to `true`
+
+Also, error response contains code of error, response status code, main message, additional description and comments and stack.
+
+```javascript
+import { Routings, TheAPI, middlewares } from 'the-api';
+
+const router = new Routings();
+
+router.errors({ // set user-defined errors
+  USER_DEFINED_ERROR: {
+    code: 55,
+    status: 403,
+    description: 'user defined error description',
+  },
+});
+
+router.get('/error', async (c) => {
+  throw new Error('USER_DEFINED_ERROR'); // throw user-defined error
+});
+
+router.get('/additional', async (c) => { // user-defined with additional information
+    throw new Error('USER_DEFINED_ERROR: additional information');
+});
+
+const theAPI = new TheAPI({
+  routings: [
+    middlewares.errors, // errors middleware
+    router,
+  ]
+});
+
+await theAPI.up();
+```
+
+#### User-defined error
+
+```
+curl http://localhost:7788/error
+```
+
+Output:
+
+```
+{
+    "result": {
+        "code": 55,
+        "status": 403,
+        "description": "user defined error description",
+        "name": "USER_DEFINED_ERROR",
+        "additional": "",
+        "stack": "Error: USER_DEFINED_ERROR\n    at ...stack trace...",
+        "error": true
+    },
+    "error": true,
+    "serverTime": "2026-03-05T15:48:28.369Z"
+}
+```
+
+#### User-defined error with additional information
+
+```
+curl http://localhost:7788/additional
+```
+
+Output:
+
+```
+{
+    "result": {
+        "code": 55,
+        "status": 403,
+        "description": "user defined error description",
+        "name": "USER_DEFINED_ERROR",
+        "additional": "additional information",
+        "stack": "Error: USER_DEFINED_ERROR\n    at ...stack trace...",
+        "error": true
+    },
+    "error": true,
+    "serverTime": "2026-03-05T15:48:28.369Z"
+}
+```
+
+#### Error with meta information
+
+```typescript
+router.get('/meta', async (c: any) => {
+  c.set('meta', { x: 3 });
+  throw new Error('error message');
+});
+```
+
+```javascript
+{
+  result: {
+    code: 11,
+    status: 500,
+    description: "An unexpected error occurred",
+    message: "error message",
+    additional: "",
+    stack: "...stack...",
+    error: true,
+  },
+  meta: {
+    x: 3,
+  },
+  error: true,
+  requestTime: 1,
+  serverTime: "2024-05-18T08:17:56.929Z",
+  logId: "06zqxkyb",
+}
+```
+
+#### 404 Not Found
+
+```
+curl http://localhost:7788/not-found
+```
+
+```javascript
+{
+  result: {
+    code: 21,
+    status: 404,
+    description: "Not found",
+    message: "NOT_FOUND",
+    additional: "",
+    error: true,
+  },
+  error: true,
+  requestTime: 0,
+  serverTime: "2024-05-18T16:56:21.501Z",
+}
+```
+
+#### 500 Internal Server Error
+
+```javascript
+{
+  result: {
+    code: 11,
+    status: 500,
+    description: "An unexpected error occurred",
+    message: "error message",
+    additional: "",
+    stack: "...stack...",
+    error: true,
+  },
+  error: true,
+  requestTime: 1,
+  serverTime: "2024-05-18T08:17:56.929Z",
+  logId: "06zqxkyb",
+}
+```
+
+#### Status middleware
+
+`GET /status`
+
+```javascript
+{
+  result: {
+    ok: 1,
+  },
+  error: false,
+  requestTime: 1,
+  serverTime: "2024-05-18T08:17:56.929Z",
+  logId: "06zqxkyb",
+}
+```
 
 ## Routes
 
@@ -148,227 +392,3 @@ router.delete('/patch/:id', async (c: Context) => {
   const body = await c.req.json();
   c.set('result', body);
 });
-
-## Logs middleware
-
-```typescript
-import { logs } from '../extensions';
-
-const router = new Routings();
-
-router.post('/data/:id', async (c: Context) => {
-  const body = await c.req.json();
-  c.var.log('incoming data', body);
-
-  c.set('result', {...c.req.param(), token: 'xxx', refresh: 'yyy'});
-});
-
-const theAPI = new TheAPI({ routings: [logs, router] });
-export default theAPI.up();
-```
-
-```
-POST /data/12 {"password":"1"}
-```
-
-Log example:
-
-```
-[2024-05-18T12:30:33.837Z] [du69kxxq] [POST] [/data/12] [0] [begin]
-[2024-05-18T12:30:33.837Z] [du69kxxq] [POST] [/data/12] [0] {"headers":{"content-type":"application/json"},"query":{},"body":{"password":"<hidden>"},"ip":null,"method":"POST","path":"/data/12"}
-[2024-05-18T12:30:33.837Z] [du69kxxq] [POST] [/data/12] [0] incoming data
-[2024-05-18T12:30:33.837Z] [du69kxxq] [POST] [/data/12] [0] {"password":"<hidden>"}
-[2024-05-18T12:30:33.838Z] [du69kxxq] [POST] [/data/12] [1] {"id":"12","token":"<hidden>","refresh":"<hidden>"}
-[2024-05-18T12:30:33.838Z] [du69kxxq] [POST] [/data/12] [1] [end]
-```
-
-data and time, unique request id, method, path, time on server, log information
-
-each request starts with [begin] and ends with [end]
-
-after begin you can see information about request
-
-The following keys will mark as hidden: 'password', 'token', 'refresh', 'authorization'
-
-you can use `c.var.log()` to add any info to logs
-
-## Error middleware
-
-Every exception generates error response with `error` flag set to `true`
-
-Also, error response contains code of error, response status code, main message, additional description and comments and stack.
-
-```typescript
-import { errors } from '../extensions';
-
-const router = new Routings();
-
-router.get('/error', async (c: Context) => {
-  throw new Error('error message');
-});
-
-const theAPI = new TheAPI({ routings: [errors, router] });
-export default theAPI.up();
-```
-
-```javascript
-{
-  result: {
-    code: 11,
-    status: 500,
-    description: "An unexpected error occurred",
-    message: "error message",
-    additional: "",
-    stack: "...stack...",
-    error: true,
-  },
-  error: true,
-  requestTime: 1,
-  serverTime: "2024-05-18T08:17:56.929Z",
-  logId: "06zqxkyb",
-}
-```
-
-### 404 Not Found
-
-```javascript
-{
-  result: {
-    code: 21,
-    status: 404,
-    description: "Not found",
-    message: "NOT_FOUND",
-    additional: "",
-    error: true,
-  },
-  error: true,
-  requestTime: 0,
-  serverTime: "2024-05-18T16:56:21.501Z",
-}
-```
-
-### User-defined errors
-
-```typescript
-router.get('/user-defined-error', async (c: Context) => {
-  throw new Error('USER_DEFINED_ERROR');
-});
-
-router.errors({
-  USER_DEFINED_ERROR: {
-    code: 55,
-    status: 403,
-    description: 'user defined error',
-  },
-  ANOTHER_USER_DEFINED_ERROR: {
-    code: 57,
-    status: 404,
-  },
-});
-```
-
-```javascript
-{
-  result: {
-    code: 55,
-    status: 403,
-    description: "user defined error",
-    message: "USER_DEFINED_ERROR",
-    additional: "",
-    stack: "...stack...",
-    error: true,
-  },
-  error: true,
-  requestTime: 0,
-  serverTime: "2024-05-18T10:39:49.795Z",
-  logId: "06zqxkyb",
-}
-```
-
-### Error with additional information
-
-```typescript
-router.errors({
-  USER_DEFINED_ERROR: {
-    code: 55,
-    status: 403,
-    description: 'user defined error',
-  },
-});
-
-router.get('/user-defined-error-addition', async (c: any) => {
-  try {
-    c.some.path();
-  } catch (err) {
-    throw new Error('USER_DEFINED_ERROR: additional information');
-  }
-});
-```
-
-```javascript
-{
-  result: {
-    code: 55,
-    status: 403,
-    description: "user defined error",
-    message: "USER_DEFINED_ERROR",
-    additional: "additional information",
-    stack: "...",
-    error: true,
-  },
-  error: true,
-  requestTime: 1,
-  serverTime: "2024-05-18T11:09:04.163Z",
-}
-```
-
-
-### Error with meta information
-
-```typescript
-router.get('/user-defined-error-message-meta', async (c: any) => {
-  try {
-    c.some.path();
-  } catch {
-    c.set('meta', { x: 3 });
-    throw new Error('error message');
-  }
-});
-```
-
-```javascript
-{
-  result: {
-    code: 11,
-    status: 500,
-    description: "An unexpected error occurred",
-    message: "error message",
-    additional: "",
-    stack: "...stack...",
-    error: true,
-  },
-  meta: {
-    x: 3,
-  },
-  error: true,
-  requestTime: 1,
-  serverTime: "2024-05-18T08:17:56.929Z",
-  logId: "06zqxkyb",
-}
-```
-
-## Status middleware
-
-`GET /status`
-
-```javascript
-{
-  result: {
-    ok: 1,
-  },
-  error: false,
-  requestTime: 1,
-  serverTime: "2024-05-18T08:17:56.929Z",
-  logId: "06zqxkyb",
-}
-```
