@@ -15,8 +15,8 @@ router.get('/data/:id', async (c) => { // hono routing
 const theAPI = new TheAPI({ routings: [router] });
 
 await theAPI.up(); // use with node
-
-// export default await theAPI.upBun(); // ...or use with bun
+// ...or use with bun
+// export default await theAPI.upBun();
 ```
 
 ### Request and response
@@ -36,6 +36,62 @@ curl http://localhost:7788/data/123
     "serverTime": "2026-03-05T13:47:54.709Z"
 }
 ```
+
+### DB CRUD example
+
+cat .env
+DB_HOST=localhost
+DB_PORT=6433
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_DATABASE=postgres
+
+```typescript
+// ./migrations/20260305134700_create_messages_table.ts
+export const up = (knex) => knex.schema
+  .createTable('messages', (table) => {
+    table.increments('id').primary();
+    table.timestamp('timeCreated').defaultTo(knex.fn.now());
+    table.integer('warningLevel');
+    table.string('body').notNullable();
+  });
+
+export const down = (knex) => knex.schema
+  .dropTable('messages');
+```
+
+```typescript
+// ./index.ts
+import { Routings, TheAPI } from 'the-api';
+
+const router = new Routings({ migrationDirs: ['./migrations'] });
+
+router.crud({ table: 'messages' });
+
+const theAPI = new TheAPI({ routings: [router] });
+
+await theAPI.up();
+```
+
+Create:
+$ curl -X POST http://localhost:7788/messages -H "Content-Type: application/json" -d '{"warningLevel": 2, "body": "test message"}'
+{"result":{"id":1,"timeCreated":"2026-03-05T19:46:22.655Z","warningLevel":2,"body":"test message"},"error":false,"requestTime":47,"serverTime":"2026-03-05T19:46:22.659Z"}
+
+Update:
+$ curl -X PATCH http://localhost:7788/messages/1 -H "Content-Type: application/json" -d '{"warningLevel": 3}'
+{"result":{"id":1,"timeCreated":"2026-03-05T19:46:22.655Z","warningLevel":3,"body":"test message"},"error":false,"requestTime":25,"serverTime":"2026-03-05T19:46:55.309Z"}
+
+Get all:
+$ curl http://localhost:7788/messages
+{"result":[],"meta":{"total":0,"limit":0,"skip":0,"page":1,"pages":1,"isFirstPage":true,"isLastPage":true},"error":false,"requestTime":22,"serverTime":"2026-03-05T19:44:28.264Z"}
+
+Get one:
+$ curl http://localhost:7788/messages/1
+{"result":{"id":1,"timeCreated":"2026-03-05T19:46:22.655Z","warningLevel":3,"body":"test message"},"error":false,"requestTime":4,"serverTime":"2026-03-05T19:47:37.232Z"}
+
+Delete:
+$ curl -X DELETE http://localhost:7788/messages/1
+{"result":{"ok":true},"meta":{"countDeleted":1},"error":false,"requestTime":12,"serverTime":"2026-03-05T19:48:10.127Z"}
 
 ### Error example
 
