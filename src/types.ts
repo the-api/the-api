@@ -94,7 +94,7 @@ export type FilesOptions = {
 export type DbColumnInfo = {
   column_name: string;
   data_type: string;
-  is_nullable: string;
+  is_nullable: 'YES' | 'NO';
   table_schema: string;
   table_name: string;
   references?: {

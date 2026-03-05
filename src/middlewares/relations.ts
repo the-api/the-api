@@ -38,13 +38,13 @@ const relationsMiddleware = async (c: AppContext, next: Next) => {
     // for (const item of Object.entries(relationsData as Record<string, CrudBuilderOptionsType>)) await findRelations(item);
 
     const idName = definition.relationIdName || 'id';
-    const { result: data } = await crud.getRequestResult(c, {
+    const { result: data } = await crud.getRequestResult(c as any, {
       [idName]: ids,
     });
 
     if (!relations[key]) relations[key] = {};
     for (const d of data) {
-      const idKey = d[idName];
+      const idKey = d[idName] as string;
       relations[key][idKey] = d;
     }
   };

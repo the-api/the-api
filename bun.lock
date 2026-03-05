@@ -21,7 +21,7 @@
         "@types/node": "^25.3.1",
         "@types/nodemailer": "^7.0.11",
         "the-api-langs": "^0.1.1",
-        "the-api-roles": "^0.1.1",
+        "the-api-roles": "^0.1.8",
       },
     },
   },
@@ -194,7 +194,7 @@
 
     "the-api-langs": ["the-api-langs@0.1.1", "", { "dependencies": { "the-api": "^21.1.4" } }, "sha512-z8nW11qVkOorcJgqC4mA4P5nHxODPyILkD/K+kQmGGThNKs/T9CGa6SkFCfw1kh6fNurRcpal9Vt2vs0+UNrnA=="],
 
-    "the-api-roles": ["the-api-roles@0.1.1", "", {}, "sha512-48NltKYhYXclq/uszGnJSi5pk5hMd2/abKTK+LjN7euMfSFdx7DehR02llGoX+UT2fYt5VwKKPVGzVADoN2LNw=="],
+    "the-api-roles": ["the-api-roles@0.1.8", "", {}, "sha512-Oc/K0Ww56qRhZ7r8QtonSaDussgWZjk+tY2gtjcXj9iWncDrWluVzIuwC7V81cvZYYDnDGjAAYa3IT3fut4jcA=="],
 
     "the-api-routings": ["the-api-routings@0.5.2", "", { "dependencies": { "flattening": "^2.4.3", "hono": "^4.12.2" } }, "sha512-f8nexp/Y5FVHWUjaKRWmP1DRlYYekgCDAE6hKTQ0AfALOorhHlKgGjnIi52cA60CsUO4jjr8ANZgmIzPBHo32w=="],
 

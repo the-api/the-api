@@ -8,7 +8,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "test": "bun test --preload ./test/init.ts",
-    "build": "bun build ./src/index.ts --outdir ./dist --target node --minify --external luxon --external knex --external pg --external jsonwebtoken --external hono --external flattening --external @types/node --external @types/bun && tsc"
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --minify --external luxon --external knex --external pg --external jsonwebtoken --external hono --external flattening --external @types/node --external @types/bun --external the-api-roles && tsc"
   },
   "dependencies": {
     "flattening": "^2.4.3",
@@ -27,7 +27,7 @@
     "@types/node": "^25.3.1",
     "@types/nodemailer": "^7.0.11",
     "the-api-langs": "^0.1.1",
-    "the-api-roles": "^0.1.1"
+    "the-api-roles": "^0.1.8"
   },
   "repository": {
     "type": "git",

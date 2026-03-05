@@ -1,11 +1,14 @@
 import type { Context, MiddlewareHandler, Handler } from 'hono';
+import type { SocketAddress } from 'bun';
+import type { Knex } from 'knex';
 import type { H } from 'hono/types';
 import type { Routings } from 'the-api-routings';
 import type { Roles } from 'the-api-roles';
+import type { Files } from './Files';
 export type { MiddlewareHandler, Handler };
-export type MethodsType = ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'][number];
+export type MethodType = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE' | 'OPTIONS';
 export type MethodPathType = {
-    method?: MethodsType;
+    method?: MethodType;
     path: string;
 };
 export type RoutesType = MethodPathType & {
@@ -14,36 +17,117 @@ export type RoutesType = MethodPathType & {
 export type PushToRoutesParamsType = MethodPathType & {
     fnArr: H<any, any, {}, any>[];
 };
-export type RoutesErrorsType = {
-    [key: string]: {
-        code: number;
-        status: number;
-        description?: string;
+export type RoutesErrorType = {
+    code: number;
+    status: number;
+    description?: string;
+};
+export type RoutesErrorsType = Record<string, RoutesErrorType>;
+export type EmailTemplatesType = {
+    subject?: string;
+    text?: string;
+    html?: string;
+};
+export type EmailParamsType = EmailTemplatesType & {
+    to: string;
+    template?: string;
+    data?: Record<string, unknown>;
+};
+export type EmailConfig = {
+    host?: string;
+    port?: number | string;
+    secure?: boolean;
+    auth?: {
+        user?: string;
+        pass?: string;
+    };
+    from?: string;
+    tls?: {
+        rejectUnauthorized?: boolean;
     };
 };
+export type UploadResultType = {
+    path: string;
+    name: string;
+    size: number;
+    bucket?: string;
+};
+export type FilesOptions = {
+    folder?: string;
+    minio?: {
+        bucketName?: string;
+        endPoint?: string;
+        port?: number;
+        useSSL?: boolean;
+        accessKey?: string;
+        secretKey?: string;
+    };
+};
+export type DbColumnInfo = {
+    column_name: string;
+    data_type: string;
+    is_nullable: 'YES' | 'NO';
+    table_schema: string;
+    table_name: string;
+    references?: {
+        table_schema: string;
+        constraint_name: string;
+        table_name: string;
+        column_name: string;
+        foreign_table_schema: string;
+        foreign_table_name: string;
+        foreign_column_name: string;
+    };
+    [key: string]: unknown;
+};
+export type DbTablesType = Record<string, Record<string, DbColumnInfo>>;
+export type DbOptionsType = {
+    migrationDirs?: string[];
+};
+export type AppBindings = {
+    ip: SocketAddress | null;
+};
+export type AppVariables = {
+    log: (...args: unknown[]) => void;
+    error: (err: Error | {
+        message: string;
+    }) => void;
+    getErrorByMessage: (message: string) => RoutesErrorType | undefined;
+    getTemplateByName: (name: string) => EmailTemplatesType;
+    result: unknown;
+    meta: Record<string, unknown>;
+    relations: Record<string, unknown>;
+    relationsData: Record<string, unknown>;
+    logId: string;
+    user: Record<string, unknown>;
+    db: Knex;
+    dbWrite: Knex;
+    dbTables: DbTablesType;
+    files: Files;
+    roles: Roles;
+    email: (params: EmailParamsType) => Promise<void>;
+};
+export type AppEnv = {
+    Bindings: AppBindings;
+    Variables: AppVariables;
+};
+export type AppContext = Context<AppEnv>;
 export type TheApiOptionsType = {
     routings: Routings[];
     roles?: Roles;
+    emailTemplates?: Record<string, EmailTemplatesType>;
     port?: number;
-    migrationDirs?: string[];
-};
-export type DbOptionsType = {
     migrationDirs?: string[];
 };
 export type RoutingsOptionsType = {
     migrationDirs?: string[];
 };
-export type DbTablesType = {
-    data_type: string;
-    is_nullable: string;
-    [key: string]: any;
-};
 export type stringRecordType = Record<string, string>;
+export type fieldType = string | number | boolean;
 export type fieldRecordType = Record<string, fieldType>;
 export type whereParamsType = stringRecordType & {
     isDeleted?: boolean;
 };
-export type fieldType = string | number | boolean;
 export type CrudBuilderJoinType = {
     table: string;
     schema?: string;
@@ -61,7 +145,7 @@ export type CrudBuilderJoinType = {
     permission?: string;
 };
 export type CrudBuilderPermissionsType = {
-    protectedMethods?: (MethodsType | '*')[];
+    protectedMethods?: (MethodType | '*')[];
     owner?: string[];
     fields?: {
         viewable?: Record<string, string[]>;
@@ -90,21 +174,21 @@ export type CrudBuilderOptionsType = {
     defaultWhereRaw?: string;
     defaultSort?: string;
     sortRaw?: string;
-    fieldsRaw?: any;
+    fieldsRaw?: unknown;
     includeDeleted?: boolean;
     deletedReplacements?: fieldRecordType;
     relations?: Record<string, CrudBuilderOptionsType>;
     relationIdName?: string;
-    tokenRequired?: any;
-    ownerRequired?: any;
-    rootRequired?: any;
-    access?: any;
-    accessByStatuses?: any;
-    dbTables?: any;
-    cache?: any;
-    userIdFieldName?: any;
-    additionalFields?: any;
-    apiClientMethodNames?: any;
+    tokenRequired?: unknown;
+    ownerRequired?: unknown;
+    rootRequired?: unknown;
+    access?: unknown;
+    accessByStatuses?: unknown;
+    dbTables?: DbTablesType;
+    cache?: unknown;
+    userIdFieldName?: string;
+    additionalFields?: unknown;
+    apiClientMethodNames?: unknown;
 };
 export type metaType = {
     total: number;
@@ -119,9 +203,9 @@ export type metaType = {
     isLastPage?: boolean;
 };
 export type getResultType = {
-    result: any[];
+    result: unknown[];
     meta: metaType;
-    relations?: Record<string, any[]>;
+    relations?: Record<string, unknown[]>;
     error?: boolean;
 };
 //# sourceMappingURL=types.d.ts.map

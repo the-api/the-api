@@ -1,14 +1,15 @@
-import { knex } from 'knex';
-import type { DbOptionsType } from './types';
+import type { Knex } from 'knex';
+import type { DbOptionsType, DbTablesType } from './types';
 export declare class Db {
-    db: knex.Knex<any, unknown[]>;
-    dbWrite: knex.Knex<any, unknown[]>;
-    dbTables: any;
+    db: Knex;
+    dbWrite: Knex;
+    dbTables: DbTablesType;
     private migrationDirs;
     private intervalDbCheck?;
     constructor(options?: DbOptionsType);
-    waitDb(): Promise<unknown>;
+    waitDb(): Promise<void>;
     checkDb(): Promise<void>;
-    private _getdbTables;
+    destroy(): Promise<void>;
+    private introspectTables;
 }
 //# sourceMappingURL=Db.d.ts.map
