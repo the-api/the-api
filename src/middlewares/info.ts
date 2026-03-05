@@ -1,9 +1,11 @@
 import { Routings } from 'the-api-routings';
 import type { Next } from 'hono';
 import type { AppContext } from '../types';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-const file = Bun.file('./package.json');
-const { name, version } = await file.json();
+const packageJson = JSON.parse(readFileSync(join(process.cwd(), './package.json'), 'utf-8'));
+const { name, version } = packageJson;
 
 const startTime = new Date();
 let totalRequests = 0;
