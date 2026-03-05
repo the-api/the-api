@@ -1,6 +1,6 @@
 import { existsSync, statSync } from 'fs';
 import { knex } from 'knex';
-import { FsMigrations } from 'knex/lib/migrations/migrate/sources/fs-migrations';
+import { FsMigrations } from 'knex/lib/migrations/migrate/sources/fs-migrations.js';
 import type { Knex } from 'knex';
 import type { DbOptionsType, DbTablesType, DbColumnInfo } from './types';
 
