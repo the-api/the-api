@@ -1,1 +1,1 @@
-{"version":3,"file":"info.d.ts","sourceRoot":"","sources":["../../src/middlewares/info.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,QAAQ,EAAE,MAAM,kBAAkB,CAAC;AAqB5C,QAAA,MAAM,IAAI,UAAiB,CAAC;AAI5B,OAAO,EAAE,IAAI,EAAE,CAAC"}
+{"version":3,"file":"info.d.ts","sourceRoot":"","sources":["../../src/middlewares/info.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,QAAQ,EAAE,MAAM,kBAAkB,CAAC;AAuB5C,QAAA,MAAM,IAAI,UAAiB,CAAC;AAI5B,OAAO,EAAE,IAAI,EAAE,CAAC"}

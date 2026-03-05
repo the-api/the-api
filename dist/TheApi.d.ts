@@ -15,7 +15,8 @@ export declare class TheAPI {
     emailTemplates: Record<string, EmailTemplatesType>;
     constructor(options?: TheApiOptionsType);
     init(): Promise<void>;
-    up(): Promise<{
+    up(): Promise<import("@hono/node-server").ServerType>;
+    upBun(): Promise<{
         fetch: (req: Request, server: Server<any>) => Response | Promise<Response>;
         port: number;
     }>;

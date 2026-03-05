@@ -70,8 +70,8 @@ export class TheAPI {
   async up() {
     await this.init();
     return serve({
-      fetch: (req, server) =>
-        this.app.fetch(req, { ip: server.requestIP(req) }),
+      fetch: (req) =>
+        this.app.fetch(req, { ip: req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') }),
       port: this.port,
     });
   }
