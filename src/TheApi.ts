@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { serve } from "@hono/node-server";
 import { RegExpRouter } from 'hono/router/reg-exp-router';
 import { resolve } from 'path';
 import { Routings } from 'the-api-routings';
@@ -68,7 +69,7 @@ export class TheAPI {
 
   async up() {
     await this.init();
-    return Bun.serve({
+    return serve({
       fetch: (req, server) =>
         this.app.fetch(req, { ip: server.requestIP(req) }),
       port: this.port,
