@@ -68,6 +68,15 @@ export class TheAPI {
 
   async up() {
     await this.init();
+    return Bun.serve({
+      fetch: (req, server) =>
+        this.app.fetch(req, { ip: server.requestIP(req) }),
+      port: this.port,
+    });
+  }
+
+  async upBun() {
+    await this.init();
     return {
       fetch: (req: Request, server: Server<any>) =>
         this.app.fetch(req, { ip: server.requestIP(req) }),
