@@ -240,9 +240,6 @@ export class TheAPI {
             case 'PATCH':
               app.patch(route.path, ...route.handlers);
               break;
-            case 'PUT':
-              app.put(route.path, ...route.handlers);
-              break;
             case 'DELETE':
               app.delete(route.path, ...route.handlers);
               break;

@@ -154,10 +154,6 @@ export class TestClient {
     return this.request('PATCH', path, { json }, token);
   }
 
-  async put(path: string, json: HttpPostBodyType, token?: string) {
-    return this.request('PUT', path, { json }, token);
-  }
-
   async delete(path: string, token?: string) {
     return this.request('DELETE', path, undefined, token);
   }

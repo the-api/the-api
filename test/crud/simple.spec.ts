@@ -50,8 +50,8 @@ describe('simple CRUD requests', () => {
     expect(result.name).toEqual('test321');
   });
 
-  test('PUT /testNews/1 { name: \'test111\' }', async () => {
-    const { result } = await client.put('/testNews/1', { name: 'test111' });
+  test('PATCH /testNews/1 { name: \'test111\' }', async () => {
+    const { result } = await client.patch('/testNews/1', { name: 'test111' });
 
     expect(result.name).toEqual('test111');
   });

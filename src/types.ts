@@ -12,7 +12,7 @@ export type { MiddlewareHandler, Handler };
 // HTTP
 // ------------------------------------------
 
-export type MethodType = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE' | 'OPTIONS';
+export type MethodType = 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'OPTIONS';
 
 export type MethodPathType = {
   method?: MethodType;

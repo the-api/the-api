@@ -18,7 +18,7 @@ router.crud({
   readOnlyFields: ['roles', 'email', 'emailToChange'],
 
   permissions: {
-    protectedMethods: ['*'], // => create permissions: S(table || prefix).[get|post|patch|put|delete]
+    protectedMethods: ['*'], // => create permissions: S(table || prefix).[get|post|patch|delete]
     owner: ['users.delete', 'users.getFullInfo', 'users.editEmail'],
 
     fields: {

@@ -37,21 +37,29 @@ curl http://localhost:7788/data/123
 }
 ```
 
-### DB CRUD example
+### DB + CRUD example
 
-cat .env
+- You need to have PostgreSQL running and `the-api` installed.
+- Then, create `.env`, `./migrations/20260305134700_create_messages_table.ts` and `./index.ts` files with the following content:
+
+**.env**
+
+```env
 DB_HOST=localhost
-DB_PORT=6433
+DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_DATABASE=postgres
+```
+
+**./migrations/20260305134700_create_messages_table.ts**
 
 ```typescript
-// ./migrations/20260305134700_create_messages_table.ts
 export const up = (knex) => knex.schema
   .createTable('messages', (table) => {
     table.increments('id').primary();
     table.timestamp('timeCreated').defaultTo(knex.fn.now());
+    table.timestamp('timeUpdated');
     table.integer('warningLevel');
     table.string('body').notNullable();
   });
@@ -60,8 +68,9 @@ export const down = (knex) => knex.schema
   .dropTable('messages');
 ```
 
+**./index.ts**
+
 ```typescript
-// ./index.ts
 import { Routings, TheAPI } from 'the-api';
 
 const router = new Routings({ migrationDirs: ['./migrations'] });
@@ -73,25 +82,116 @@ const theAPI = new TheAPI({ routings: [router] });
 await theAPI.up();
 ```
 
-Create:
-$ curl -X POST http://localhost:7788/messages -H "Content-Type: application/json" -d '{"warningLevel": 2, "body": "test message"}'
-{"result":{"id":1,"timeCreated":"2026-03-05T19:46:22.655Z","warningLevel":2,"body":"test message"},"error":false,"requestTime":47,"serverTime":"2026-03-05T19:46:22.659Z"}
+- If you're using Node.js, check that you have `"type": "module"` in your `package.json` and start your project with `node --env-file=.env index.js`.
+- If you're using Deno, start with `deno run --allow-net --allow-env --allow-read index.ts`.
+- If you're using Bun, just start with `bun index.ts`.
 
-Update:
-$ curl -X PATCH http://localhost:7788/messages/1 -H "Content-Type: application/json" -d '{"warningLevel": 3}'
-{"result":{"id":1,"timeCreated":"2026-03-05T19:46:22.655Z","warningLevel":3,"body":"test message"},"error":false,"requestTime":25,"serverTime":"2026-03-05T19:46:55.309Z"}
+#### CRUD operations
 
-Get all:
-$ curl http://localhost:7788/messages
-{"result":[],"meta":{"total":0,"limit":0,"skip":0,"page":1,"pages":1,"isFirstPage":true,"isLastPage":true},"error":false,"requestTime":22,"serverTime":"2026-03-05T19:44:28.264Z"}
+##### Create
 
-Get one:
-$ curl http://localhost:7788/messages/1
-{"result":{"id":1,"timeCreated":"2026-03-05T19:46:22.655Z","warningLevel":3,"body":"test message"},"error":false,"requestTime":4,"serverTime":"2026-03-05T19:47:37.232Z"}
+`curl -X POST http://localhost:7788/messages -H "Content-Type: application/json" -d '{"warningLevel": 2, "body": "test message"}'`
 
-Delete:
-$ curl -X DELETE http://localhost:7788/messages/1
-{"result":{"ok":true},"meta":{"countDeleted":1},"error":false,"requestTime":12,"serverTime":"2026-03-05T19:48:10.127Z"}
+```json
+{
+    "result": {
+        "id": 1,
+        "timeCreated": "2026-03-06T12:52:43.568Z",
+        "timeUpdated": null,
+        "warningLevel": 2,
+        "body": "test message"
+    },
+    "error": false,
+    "requestTime": 34,
+    "serverTime": "2026-03-06T12:52:43.571Z"
+}
+```
+
+##### Update
+
+`curl -X PATCH http://localhost:7788/messages/1 -H "Content-Type: application/json" -d '{"warningLevel": 3}'`
+
+```json
+{
+    "result": {
+        "id": 1,
+        "timeCreated": "2026-03-06T12:52:43.568Z",
+        "timeUpdated": "2026-03-06T12:52:47.350Z",
+        "warningLevel": 3,
+        "body": "test message"
+    },
+    "error": false,
+    "requestTime": 36,
+    "serverTime": "2026-03-06T12:52:47.376Z"
+}
+```
+
+##### Get all
+
+`curl http://localhost:7788/messages`
+
+```json
+{
+    "result": [
+        {
+            "id": 1,
+            "timeCreated": "2026-03-06T12:52:43.568Z",
+            "timeUpdated": "2026-03-06T12:52:47.350Z",
+            "warningLevel": 3,
+            "body": "test message"
+        }
+    ],
+    "meta": {
+        "total": 1,
+        "limit": 0,
+        "skip": 0,
+        "page": 1,
+        "pages": 1,
+        "isFirstPage": true,
+        "isLastPage": true
+    },
+    "error": false,
+    "requestTime": 6,
+    "serverTime": "2026-03-06T12:52:54.800Z"
+}
+```
+
+##### Get one
+
+`curl http://localhost:7788/messages/1`
+
+```json
+{
+    "result": {
+        "id": 1,
+        "timeCreated": "2026-03-06T12:52:43.568Z",
+        "timeUpdated": "2026-03-06T12:52:47.350Z",
+        "warningLevel": 3,
+        "body": "test message"
+    },
+    "error": false,
+    "requestTime": 16,
+    "serverTime": "2026-03-06T12:53:03.442Z"
+}
+```
+
+##### Delete
+
+`curl -X DELETE http://localhost:7788/messages/1`
+
+```json
+{
+    "result": {
+        "ok": true
+    },
+    "meta": {
+        "countDeleted": 1
+    },
+    "error": false,
+    "requestTime": 12,
+    "serverTime": "2026-03-06T12:53:16.420Z"
+}
+```
 
 ### Error example
 
@@ -431,13 +531,6 @@ router.post('/post', async (c: Context) => {
 ### Patch route
 
 router.patch('/patch/:id', async (c: Context) => {
-  const body = await c.req.json();
-  c.set('result', {...c.req.param(), ...body});
-});
-
-### Put route
-
-router.put('/put/:id', async (c: Context) => {
   const body = await c.req.json();
   c.set('result', {...c.req.param(), ...body});
 });
