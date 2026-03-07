@@ -3,7 +3,7 @@ import { getTestClient } from '../lib';
 import { Routings, TheAPI } from '../../src';
 import {type  CrudBuilderOptionsType } from '../../src';
 
-const router = new Routings({ migrationDirs: ['./test/migrations'] });
+const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 
 const typeDefinition: CrudBuilderOptionsType = { table: 'testTypes' };
 

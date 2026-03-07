@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { getTestClient } from '../../test/lib';
+import { getTestClient } from '../../tests/lib';
 import { Routings, TheAPI } from '../../src';
 
-const router = new Routings({ migrationDirs: ['./test/migrations'] });
+const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 
 router.crud({
   table: 'messages',

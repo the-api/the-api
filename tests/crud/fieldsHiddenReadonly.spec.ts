@@ -4,7 +4,7 @@ import { roles } from 'the-api-roles';
 import { Routings, TheAPI } from '../../src';
 import { getTestClient } from '../lib';
 
-const router = new Routings({ migrationDirs: ['./test/migrations'] });
+const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 
 router.crud({
   table: 'testNews',

@@ -9,7 +9,7 @@ roles.init({
   registered: ['testNews.get', 'users.get'],
 });
 
-const router = new Routings({ migrationDirs: ['./test/migrations'] });
+const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 
 router.crud({
   table: 'testNews',

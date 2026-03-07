@@ -11,7 +11,7 @@ roles.init({
   registered: ['testNews.getViews'],
 });
 
-const router = new Routings({ migrationDirs: ['./test/migrations'] });
+const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 
 router.crud({
   table: 'testNews',

@@ -7,7 +7,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "test": "bun test --preload ./test/init.ts",
+    "test": "bun test --preload ./tests/init.ts",
     "build": "bun build ./src/index.ts --outdir ./dist --target node --minify --external luxon --external knex --external pg --external jsonwebtoken --external hono --external flattening --external @types/node --external @types/bun --external the-api-roles && tsc"
   },
   "dependencies": {

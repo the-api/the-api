@@ -3,7 +3,7 @@ import { getTestClient } from '../lib';
 import { Routings, TheAPI } from '../../src';
 import type { AppContext } from '../../src';
 
-const router = new Routings({ migrationDirs: ['./test/migrations'] });
+const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 
 router.get('/check-migration', async (c: AppContext) => {
   await c.var.dbWrite('testNews').insert({ name: 'test' });

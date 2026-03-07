@@ -2,7 +2,7 @@ import { expect, test, describe } from 'bun:test';
 import { getTestClient } from '../lib';
 import { Routings, TheAPI } from '../../src';
 
-const router = new Routings({ migrationDirs: ['./test/migrations'] });
+const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 
 router.crud({ table: 'testTypes' });
 router.crud({ table: 'testTypeAges' });

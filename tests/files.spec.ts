@@ -31,7 +31,7 @@ describe('files', () => {
   });
 
   test('POST /upload', async () => {
-    const file = await client.readFile('./test/static/123.txt');
+    const file = await client.readFile('./tests/static/123.txt');
     const res = await client.postFormRequest('/upload', { file });
     const json = await res?.json();
     expect(json.result.name).toEqual('123.txt');

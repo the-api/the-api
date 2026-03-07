@@ -3,7 +3,7 @@ import { getTestClient } from './lib';
 import { Routings, TheAPI } from '../src';
 import { langs } from 'the-api-langs';
 
-const router = new Routings({ migrationDirs: ['./test/migrations'] });
+const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 
 router.crud({ table: 'langs' });
 
