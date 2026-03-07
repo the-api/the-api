@@ -27,7 +27,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Start test services
-        run: docker compose -f test/docker-compose.yml up -d
+        run: docker compose -f tests/docker-compose.yml up -d
 
       - name: Wait for Postgres
         run: |
@@ -42,7 +42,7 @@ jobs:
           done
 
           echo "Postgres did not become ready in time"
-          docker compose -f test/docker-compose.yml logs
+          docker compose -f tests/docker-compose.yml logs
           exit 1
 
       - name: Run tests
@@ -50,7 +50,7 @@ jobs:
 
       - name: Stop test services
         if: always()
-        run: docker compose -f test/docker-compose.yml down
+        run: docker compose -f tests/docker-compose.yml down
 
   publish:
     needs: test
