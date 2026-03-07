@@ -1,6 +1,6 @@
 # the-api
 
-## Example
+## Examples
 
 ```typescript
 import { Routings, TheAPI } from 'the-api';
@@ -193,6 +193,67 @@ await theAPI.up();
 }
 ```
 
+### Validation example
+
+`router.crud({ table: 'messages' })` auto-builds validation from DB schema:
+- `params.id` type is inferred from primary key type.
+- `query._sort` accepts only table fields.
+- `body.post`/`body.patch` are inferred from table columns.
+- `required: true` for `POST` is inferred from `NOT NULL` columns without default.
+- simple `CHECK` constraints (`>`, `>=`, `<`, `<=`, `IN`) are mapped to `min`, `max`, `enum`.
+
+```typescript
+router.crud({ table: 'messages' });
+```
+
+Custom validation can override only part of schema:
+
+```typescript
+router.crud({
+  table: 'messages',
+  validation: {
+    body: {
+      post: {
+        warningLevel: { type: 'number', min: 1, max: 3 },
+        body: { type: 'string', required: true },
+      },
+    },
+  },
+});
+```
+
+Disable all validation or only selected sections:
+
+```typescript
+router.crud({ table: 'messages', validation: {} });
+router.crud({
+  table: 'messages',
+  validation: { params: {} },
+});
+```
+
+`body.post` and `body.patch` can be functions:
+
+```typescript
+router.crud({
+  table: 'messages',
+  validation: {
+    body: {
+      post: (c, next) => ({
+        warningLevel: { type: 'number', min: 0, max: 2 },
+        body: { type: 'string', required: true },
+      }),
+      patch: (c, next) => ({
+        validate: (value) => true,
+      }),
+    },
+  },
+});
+```
+
+Zod integration example:
+https://github.com/the-api/the-api-validators-zod
+
 ### Error example
 
 ```
@@ -207,7 +268,7 @@ curl http://localhost:7788/d
         "status": 404,
         "description": "Not found",
         "name": "NOT_FOUND",
-        "additional": ""
+        "additional": []
     },
     "error": true,
     "requestTime": 2,
@@ -299,7 +360,8 @@ Output:
 
 Every exception generates error response with `error` flag set to `true`
 
-Also, error response contains code of error, response status code, main message, additional description and comments and stack.
+Also, error response contains code, status, main message, stack and `additional`.
+`additional` is always an array of objects with at least `message`.
 
 ```javascript
 import { Routings, TheAPI, middlewares } from 'the-api';
@@ -347,7 +409,7 @@ Output:
         "status": 403,
         "description": "user defined error description",
         "name": "USER_DEFINED_ERROR",
-        "additional": "",
+        "additional": [],
         "stack": "Error: USER_DEFINED_ERROR\n    at ...stack trace...",
         "error": true
     },
@@ -371,7 +433,7 @@ Output:
         "status": 403,
         "description": "user defined error description",
         "name": "USER_DEFINED_ERROR",
-        "additional": "additional information",
+        "additional": [{ "message": "additional information" }],
         "stack": "Error: USER_DEFINED_ERROR\n    at ...stack trace...",
         "error": true
     },
@@ -396,7 +458,7 @@ router.get('/meta', async (c: any) => {
     status: 500,
     description: "An unexpected error occurred",
     message: "error message",
-    additional: "",
+    additional: [],
     stack: "...stack...",
     error: true,
   },
@@ -423,7 +485,7 @@ curl http://localhost:7788/not-found
     status: 404,
     description: "Not found",
     message: "NOT_FOUND",
-    additional: "",
+    additional: [],
     error: true,
   },
   error: true,
@@ -441,7 +503,7 @@ curl http://localhost:7788/not-found
     status: 500,
     description: "An unexpected error occurred",
     message: "error message",
-    additional: "",
+    additional: [],
     stack: "...stack...",
     error: true,
   },

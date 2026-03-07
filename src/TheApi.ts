@@ -18,6 +18,7 @@ import type {
   RoutesErrorsType,
   RoutesErrorType,
 } from './types';
+import { getErrorNameAndAdditional } from './errorHelpers';
 
 const {
   PORT = '7788',
@@ -121,9 +122,7 @@ export class TheAPI {
           errorHandler(error);
         } else {
           const message = error.message;
-          const match = message.match(/^(\w+):?\s?(.*?)$/);
-          let name = match?.[1] ?? message;
-          let additional = match?.[2] ?? '';
+          let { name, additional } = getErrorNameAndAdditional(error);
 
           const getErr = c.var?.getErrorByMessage || c.get('getErrorByMessage');
           let errObj =
@@ -132,7 +131,7 @@ export class TheAPI {
           if (!errObj && typeof getErr === 'function') {
             errObj = getErr('DEFAULT');
             name = message;
-            additional = '';
+            additional = [];
           }
 
           c.set('result', { ...errObj, name, additional, error: true });
@@ -144,6 +143,7 @@ export class TheAPI {
           message: error.message,
           status: 500,
           code: 0,
+          additional: [],
         });
         c.status(500);
       }
@@ -153,6 +153,7 @@ export class TheAPI {
         message: error.message,
         status: 500,
         code: 0,
+        additional: [],
       };
       const status =
         typeof result === 'object' &&

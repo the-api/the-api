@@ -27,7 +27,15 @@ exports.up = (knex) => knex.schema
       .onDelete('SET NULL');
     table.integer('views').defaultTo(0);
     table.integer('userId');
+  })
+  .createTable('messages', (table) => {
+    table.increments('id').primary();
+    table.timestamp('timeCreated').notNullable().defaultTo(knex.fn.now());
+    table.integer('warningLevel').notNullable().checkBetween([0, 5]);
+    table.string('body').notNullable();
+    table.boolean('isDeleted').defaultTo(false);
   });
 
 exports.down = (knex) => knex.schema
+  .dropTable('messages')
   .dropTable('testNews');

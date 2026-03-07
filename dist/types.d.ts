@@ -2,11 +2,11 @@ import type { Context, MiddlewareHandler, Handler } from 'hono';
 import type { SocketAddress } from 'bun';
 import type { Knex } from 'knex';
 import type { H } from 'hono/types';
-import type { Routings } from 'the-api-routings';
+import type { Routings, CrudBuilderOptionsType as ExternalCrudOpts } from 'the-api-routings';
 import type { Roles } from 'the-api-roles';
 import type { Files } from './Files';
 export type { MiddlewareHandler, Handler };
-export type MethodType = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE' | 'OPTIONS';
+export type MethodType = 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'OPTIONS';
 export type MethodPathType = {
     method?: MethodType;
     path: string;
@@ -23,6 +23,10 @@ export type RoutesErrorType = {
     description?: string;
 };
 export type RoutesErrorsType = Record<string, RoutesErrorType>;
+export type AdditionalMessageType = {
+    message: string;
+    [key: string]: unknown;
+};
 export type EmailTemplatesType = {
     subject?: string;
     text?: string;
@@ -69,6 +73,13 @@ export type DbColumnInfo = {
     is_nullable: 'YES' | 'NO';
     table_schema: string;
     table_name: string;
+    column_default?: string | null;
+    udt_name?: string;
+    is_primary_key?: boolean;
+    check_min?: number;
+    check_max?: number;
+    check_enum?: unknown[];
+    enum_values?: unknown[];
     references?: {
         table_schema: string;
         constraint_name: string;
@@ -152,7 +163,41 @@ export type CrudBuilderPermissionsType = {
         editable?: Record<string, string[]>;
     };
 };
-export type CrudBuilderOptionsType = {
+export type ValidationType = 'string' | 'number' | 'boolean' | 'date' | 'enum' | 'array' | 'object';
+export type ValidationFieldType = ValidationType | ValidationType[];
+export type ValidationFieldSchema = {
+    type?: ValidationFieldType;
+    required?: boolean;
+    enum?: unknown[];
+    min?: number;
+    max?: number;
+    preprocess?: (value: unknown) => unknown;
+    items?: ValidationFieldSchema;
+    properties?: Record<string, ValidationFieldSchema>;
+    [key: string]: unknown;
+};
+export type ValidationSchema = Record<string, ValidationFieldSchema>;
+export type ValidationErrorItem = {
+    field: string;
+    message: string;
+    expected?: Record<string, unknown>;
+    value: unknown;
+};
+export type ValidationResolverResult = ValidationSchema | ValidationErrorItem[] | {
+    errors?: ValidationErrorItem[];
+} | null | undefined | unknown;
+export type ValidationResolver = (c: AppContext, next: () => Promise<void>) => Promise<ValidationResolverResult> | ValidationResolverResult;
+export type ValidationSection = ValidationSchema | ValidationResolver;
+export type CrudValidationOptions = {
+    params?: ValidationSection;
+    query?: ValidationSection;
+    headers?: ValidationSection;
+    body?: {
+        post?: ValidationSection;
+        patch?: ValidationSection;
+    };
+};
+export type CrudBuilderOptionsType = ExternalCrudOpts & {
     c?: Context;
     table: string;
     prefix?: string;
@@ -189,6 +234,7 @@ export type CrudBuilderOptionsType = {
     userIdFieldName?: string;
     additionalFields?: unknown;
     apiClientMethodNames?: unknown;
+    validation?: CrudValidationOptions;
 };
 export type metaType = {
     total: number;

@@ -52,7 +52,7 @@ describe('GET deleted', () => {
     });
 
     test('DELETE /testTypes/1', async () => {
-      const { result } = await client.delete('/testTypes/1');
+      const { result, ...a } = await client.delete('/testTypes/1');
       expect(result.ok).toEqual(true);
     });
 

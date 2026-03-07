@@ -11,5 +11,6 @@ export declare class Db {
     checkDb(): Promise<void>;
     destroy(): Promise<void>;
     private introspectTables;
+    private parseSimpleCheckConstraint;
 }
 //# sourceMappingURL=Db.d.ts.map

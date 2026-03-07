@@ -3,6 +3,7 @@ import { Routings } from 'the-api-routings';
 import { randomUUID } from 'crypto';
 import type { Next } from 'hono';
 import type { AppContext, RoutesErrorType } from '../types';
+import { getErrorNameAndAdditional } from '../errorHelpers';
 
 const { JWT_SECRET } = process.env;
 const secret = JWT_SECRET || randomUUID();
@@ -13,10 +14,7 @@ const beginMiddleware = async (c: AppContext, next: Next) => {
   // -- base services (may be overridden by errors middleware) --
   c.set('log', console.log);
   c.set('error', (err: Error | { message: string }) => {
-    const m = 'message' in err ? err.message : String(err);
-    const match = m.match(/^(\w+):?\s?(.*?)$/);
-    const name = match?.[1] ?? m;
-    const additional = match?.[2] ?? '';
+    const { name, additional } = getErrorNameAndAdditional(err);
 
     const getErr = c.get('getErrorByMessage');
     const errObj: RoutesErrorType | undefined = getErr?.(name);
@@ -100,6 +98,11 @@ beginRoute.errors({
     code: 25,
     status: 401,
     description: 'Invalid token. Try to renew it.',
+  },
+  VALIDATION_ERROR: {
+    code: 22,
+    status: 400,
+    description: 'Validation error',
   },
   ERROR_QUERY_VALUE: {
     code: 41,

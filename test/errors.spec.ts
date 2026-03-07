@@ -90,7 +90,7 @@ describe('errors', () => {
 
     expect(result.error).toEqual(true);
     expect(result.description).toEqual('user defined error');
-    expect(result.additional).toEqual('additional information');
+    expect(result.additional).toEqual([{ message: 'additional information' }]);
     expect(result.status).toEqual(403);
     expect(result.code).toEqual(55);
   });

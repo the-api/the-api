@@ -150,6 +150,106 @@ export class Db {
 
     const { rows: references } = await db.raw(refsQuery);
 
+    const primaryKeysQuery = `
+      SELECT
+        kcu.table_schema,
+        kcu.table_name,
+        kcu.column_name
+      FROM information_schema.table_constraints AS tc
+      JOIN information_schema.key_column_usage AS kcu
+        ON tc.constraint_name = kcu.constraint_name
+       AND tc.table_schema = kcu.table_schema
+      WHERE tc.constraint_type = 'PRIMARY KEY'`;
+    const { rows: primaryKeys } = await db.raw(primaryKeysQuery);
+
+    const checkQuery = `
+      SELECT
+        n.nspname AS table_schema,
+        cls.relname AS table_name,
+        att.attname AS column_name,
+        pg_get_constraintdef(con.oid) AS check_definition
+      FROM pg_constraint con
+      JOIN pg_class cls ON cls.oid = con.conrelid
+      JOIN pg_namespace n ON n.oid = cls.relnamespace
+      JOIN unnest(con.conkey) AS ck(attnum) ON TRUE
+      JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = ck.attnum
+      WHERE con.contype = 'c'
+        AND n.nspname NOT IN ('pg_catalog', 'information_schema')`;
+    const { rows: checks } = await db.raw(checkQuery);
+
+    const enumQuery = `
+      SELECT
+        n.nspname AS table_schema,
+        cls.relname AS table_name,
+        att.attname AS column_name,
+        array_agg(en.enumlabel ORDER BY en.enumsortorder) AS enum_values
+      FROM pg_attribute att
+      JOIN pg_class cls ON cls.oid = att.attrelid
+      JOIN pg_namespace n ON n.oid = cls.relnamespace
+      JOIN pg_type t ON t.oid = att.atttypid
+      JOIN pg_enum en ON en.enumtypid = t.oid
+      WHERE att.attnum > 0
+        AND NOT att.attisdropped
+        AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+      GROUP BY n.nspname, cls.relname, att.attname`;
+    const { rows: enumRows } = await db.raw(enumQuery);
+
+    const referencesMap = references.reduce(
+      (acc: Record<string, Record<string, string>>, row: Record<string, string>) => {
+        const key = `${row.table_schema}.${row.table_name}.${row.column_name}`;
+        acc[key] = row;
+        return acc;
+      },
+      {},
+    );
+
+    const primaryKeyMap = primaryKeys.reduce(
+      (acc: Record<string, boolean>, row: Record<string, string>) => {
+        acc[`${row.table_schema}.${row.table_name}.${row.column_name}`] = true;
+        return acc;
+      },
+      {},
+    );
+
+    const checkMap = checks.reduce(
+      (
+        acc: Record<string, { min?: number; max?: number; enum?: unknown[] }>,
+        row: Record<string, string>,
+      ) => {
+        const key = `${row.table_schema}.${row.table_name}.${row.column_name}`;
+        const parsed = this.parseSimpleCheckConstraint(
+          row.check_definition,
+          row.column_name,
+        );
+        if (!parsed) return acc;
+
+        const prev = acc[key] || {};
+        acc[key] = {
+          min: typeof parsed.min === 'number'
+            ? (typeof prev.min === 'number' ? Math.max(prev.min, parsed.min) : parsed.min)
+            : prev.min,
+          max: typeof parsed.max === 'number'
+            ? (typeof prev.max === 'number' ? Math.min(prev.max, parsed.max) : parsed.max)
+            : prev.max,
+          enum: parsed.enum
+            ? Array.from(new Set([...(prev.enum || []), ...parsed.enum]))
+            : prev.enum,
+        };
+        return acc;
+      },
+      {},
+    );
+
+    const enumMap = enumRows.reduce(
+      (acc: Record<string, unknown[]>, row: Record<string, unknown>) => {
+        const key = `${row.table_schema}.${row.table_name}.${row.column_name}`;
+        const enumValues = Array.isArray(row.enum_values) ? row.enum_values : [];
+        acc[key] = enumValues;
+        return acc;
+      },
+      {},
+    );
+
     const result: DbTablesType = {};
 
     await Promise.all(
@@ -170,13 +270,16 @@ export class Db {
 
           result[key] = columns.reduce(
             (acc: Record<string, DbColumnInfo>, col: DbColumnInfo) => {
+              const columnKey = `${table_schema}.${table_name}.${col.column_name}`;
+              const checkData = checkMap[columnKey] || {};
               acc[col.column_name] = {
                 ...col,
-                references: references.find(
-                  (r: Record<string, string>) =>
-                    r.table_name === table_name &&
-                    r.column_name === col.column_name,
-                ),
+                references: referencesMap[columnKey],
+                is_primary_key: !!primaryKeyMap[columnKey],
+                ...(typeof checkData.min === 'number' && { check_min: checkData.min }),
+                ...(typeof checkData.max === 'number' && { check_max: checkData.max }),
+                ...(Array.isArray(checkData.enum) && checkData.enum.length && { check_enum: checkData.enum }),
+                ...(Array.isArray(enumMap[columnKey]) && enumMap[columnKey].length && { enum_values: enumMap[columnKey] }),
               };
               return acc;
             },
@@ -187,5 +290,63 @@ export class Db {
     );
 
     return result;
+  }
+
+  private parseSimpleCheckConstraint(
+    definition: string | undefined,
+    columnName: string,
+  ): { min?: number; max?: number; enum?: unknown[] } | undefined {
+    if (!definition) return;
+
+    const normalized = definition
+      .replace(/^CHECK\s*\(/i, '')
+      .replace(/\)\s*$/, '')
+      .replace(/::[a-zA-Z_][a-zA-Z0-9_ ]*/g, '');
+
+    const escapedColumn = columnName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const column = `\"?${escapedColumn}\"?`;
+
+    const minMatches = [
+      ...normalized.matchAll(new RegExp(`${column}\\s*(?:>=|>)\\s*(-?\\d+(?:\\.\\d+)?)`, 'gi')),
+      ...normalized.matchAll(new RegExp(`(-?\\d+(?:\\.\\d+)?)\\s*(?:<=|<)\\s*${column}`, 'gi')),
+    ].map((m) => Number(m[1])).filter((n) => Number.isFinite(n));
+
+    const maxMatches = [
+      ...normalized.matchAll(new RegExp(`${column}\\s*(?:<=|<)\\s*(-?\\d+(?:\\.\\d+)?)`, 'gi')),
+      ...normalized.matchAll(new RegExp(`(-?\\d+(?:\\.\\d+)?)\\s*(?:>=|>)\\s*${column}`, 'gi')),
+    ].map((m) => Number(m[1])).filter((n) => Number.isFinite(n));
+
+    const inMatches = [
+      ...normalized.matchAll(new RegExp(`${column}\\s+IN\\s*\\(([^)]+)\\)`, 'gi')),
+    ];
+    const anyArrayMatches = [
+      ...normalized.matchAll(new RegExp(`${column}\\s*=\\s*ANY\\s*\\(\\s*ARRAY\\s*\\[([^\\]]+)\\]`, 'gi')),
+    ];
+
+    const enumTokens = inMatches
+      .concat(anyArrayMatches)
+      .flatMap((match) => String(match[1] || '').split(','))
+      .map((item) => item.trim())
+      .map((item) => item.replace(/^'+|'+$/g, '').replace(/^\"+|\"+$/g, ''))
+      .filter(Boolean)
+      .map((item) => {
+        const n = Number(item);
+        return Number.isFinite(n) && `${n}` === item ? n : item;
+      });
+
+    const out: { min?: number; max?: number; enum?: unknown[] } = {};
+    if (minMatches.length) out.min = Math.max(...minMatches);
+    if (maxMatches.length) out.max = Math.min(...maxMatches);
+    if (enumTokens.length) out.enum = Array.from(new Set(enumTokens));
+
+    if (
+      typeof out.min === 'undefined'
+      && typeof out.max === 'undefined'
+      && typeof out.enum === 'undefined'
+    ) {
+      return;
+    }
+
+    return out;
   }
 }
