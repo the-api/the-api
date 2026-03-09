@@ -1,5 +1,36 @@
 # the-api
 
+- [the-api](#the-api)
+  - [Examples](#examples)
+    - [Request and response](#request-and-response)
+    - [DB + CRUD example](#db--crud-example)
+      - [CRUD operations](#crud-operations)
+        - [Create](#create)
+        - [Update](#update)
+        - [Get all](#get-all)
+        - [Get one](#get-one)
+        - [Delete](#delete)
+    - [Validation example](#validation-example)
+    - [Error example](#error-example)
+  - [.env](#env)
+  - [Response structure](#response-structure)
+    - [Fields Description](#fields-description)
+  - [Middlewares](#middlewares)
+    - [logs](#logs)
+    - [errors](#errors)
+      - [User-defined error](#user-defined-error)
+      - [User-defined error with additional information](#user-defined-error-with-additional-information)
+      - [Error with meta information](#error-with-meta-information)
+      - [404 Not Found](#404-not-found)
+      - [500 Internal Server Error](#500-internal-server-error)
+      - [Status middleware](#status-middleware)
+  - [Routes](#routes)
+    - [Using Routings](#using-routings)
+    - [Get route](#get-route)
+    - [Post route](#post-route)
+    - [Patch route](#patch-route)
+    - [Delete route](#delete-route)
+
 ## Examples
 
 ```typescript
