@@ -1,6 +1,6 @@
 {
   "name": "the-api",
-  "version": "22.5.2",
+  "version": "22.6.1",
   "license": "MIT",
   "author": "Dimitry Ivanov <2@ivanoff.org.ua> # curl -A cv ivanoff.org.ua",
   "description": "The API - Create Your API in Seconds",
