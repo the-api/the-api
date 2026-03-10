@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
 import { serve } from "@hono/node-server";
 import { RegExpRouter } from 'hono/router/reg-exp-router';
 import { resolve } from 'path';
@@ -112,7 +113,7 @@ export class TheAPI {
 
   private registerGlobalMiddleware(): void {
     // Safety net for uncaught errors
-    this.app.onError((err, c: AppContext) => {
+    this.app.onError(async (err, c: AppContext) => {
       console.error('Unhandled error:', err);
       const error = err instanceof Error ? err : new Error(String(err));
 
@@ -128,14 +129,28 @@ export class TheAPI {
           let errObj =
             typeof getErr === 'function' ? getErr(name) : undefined;
 
-          if (!errObj && typeof getErr === 'function') {
+          if (!errObj && error instanceof HTTPException) {
+            const response = error.getResponse();
+            const responseText = await response.text();
+
+            c.set('result', {
+              error: true,
+              name: responseText || message || `HTTP ${response.status}`,
+              additional,
+              status: response.status,
+              code: 0,
+            });
+            c.status(response.status as any);
+          } else if (!errObj && typeof getErr === 'function') {
             errObj = getErr('DEFAULT');
             name = message;
             additional = [];
           }
 
-          c.set('result', { ...errObj, name, additional, error: true });
-          if (errObj?.status) c.status(errObj.status as any);
+          if (errObj) {
+            c.set('result', { ...errObj, name, additional, error: true });
+            if (errObj.status) c.status(errObj.status as any);
+          }
         }
       } catch {
         c.set('result', {

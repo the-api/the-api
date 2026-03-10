@@ -18,6 +18,7 @@
   - [Middlewares](#middlewares)
     - [logs](#logs)
     - [cors](#cors)
+    - [csrf](#csrf)
     - [errors](#errors)
       - [User-defined error](#user-defined-error)
       - [User-defined error with additional information](#user-defined-error-with-additional-information)
@@ -410,6 +411,52 @@ const theAPI = new TheAPI({
 });
 
 theAPI.app.use('*', cors());
+
+await theAPI.up();
+```
+
+### csrf
+
+`csrf` is re-exported from `hono/csrf`.
+
+Docs: https://hono.dev/docs/middleware/builtin/csrf
+
+If you need CSRF protection for all methods on all routes, use `*`:
+
+```typescript
+import { Routings, TheAPI, csrf } from 'the-api';
+
+const router = new Routings();
+
+router.post('/posts', async (c) => {
+  c.set('result', { ok: true });
+});
+
+const theAPI = new TheAPI({
+  routings: [router],
+});
+
+theAPI.app.use('*', csrf());
+
+await theAPI.up();
+```
+
+If you need to allow requests from a specific origin:
+
+```typescript
+import { Routings, TheAPI, csrf } from 'the-api';
+
+const router = new Routings();
+
+router.post('/posts', async (c) => {
+  c.set('result', { ok: true });
+});
+
+const theAPI = new TheAPI({
+  routings: [router],
+});
+
+theAPI.app.use('*', csrf({ origin: 'https://app.example.com' }));
 
 await theAPI.up();
 ```
