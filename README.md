@@ -19,6 +19,9 @@
     - [logs](#logs)
     - [cors](#cors)
     - [csrf](#csrf)
+    - [body-limit](#body-limit)
+    - [compress](#compress)
+    - [etag](#etag)
     - [errors](#errors)
       - [User-defined error](#user-defined-error)
       - [User-defined error with additional information](#user-defined-error-with-additional-information)
@@ -457,6 +460,84 @@ const theAPI = new TheAPI({
 });
 
 theAPI.app.use('*', csrf({ origin: 'https://app.example.com' }));
+
+await theAPI.up();
+```
+
+### body-limit
+
+`bodyLimit` is based on `hono/body-limit`.
+
+Docs: https://hono.dev/docs/middleware/builtin/body-limit
+
+If you need to limit request body size for all methods on all routes, use `*`:
+
+```typescript
+import { Routings, TheAPI, bodyLimit } from 'the-api';
+
+const router = new Routings();
+
+router.post('/upload', async (c) => {
+  c.set('result', { ok: true });
+});
+
+const theAPI = new TheAPI({
+  routings: [router],
+});
+
+theAPI.app.use('*', bodyLimit({ maxSize: 1024 * 1024 }));
+
+await theAPI.up();
+```
+
+### compress
+
+`compress` is re-exported from `hono/compress`.
+
+Docs: https://hono.dev/docs/middleware/builtin/compress
+
+If you need response compression for all methods on all routes, use `*`:
+
+```typescript
+import { Routings, TheAPI, compress } from 'the-api';
+
+const router = new Routings();
+
+router.get('/data', async (c) => {
+  c.set('result', { ok: true });
+});
+
+const theAPI = new TheAPI({
+  routings: [router],
+});
+
+theAPI.app.use('*', compress());
+
+await theAPI.up();
+```
+
+### etag
+
+`etag` is re-exported from `hono/etag`.
+
+Docs: https://hono.dev/docs/middleware/builtin/etag
+
+If you need ETag headers for all methods on all routes, use `*`:
+
+```typescript
+import { Routings, TheAPI, etag } from 'the-api';
+
+const router = new Routings();
+
+router.get('/data', async (c) => {
+  c.set('result', { ok: true });
+});
+
+const theAPI = new TheAPI({
+  routings: [router],
+});
+
+theAPI.app.use('*', etag());
 
 await theAPI.up();
 ```

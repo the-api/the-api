@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { HTTPException } from 'hono/http-exception';
 import { serve } from "@hono/node-server";
 import { RegExpRouter } from 'hono/router/reg-exp-router';
 import { resolve } from 'path';
@@ -124,13 +123,20 @@ export class TheAPI {
         } else {
           const message = error.message;
           let { name, additional } = getErrorNameAndAdditional(error);
+          const isHttpException =
+            typeof err === 'object' &&
+            err !== null &&
+            'status' in err &&
+            typeof (err as Record<string, unknown>).status === 'number' &&
+            'getResponse' in err &&
+            typeof (err as { getResponse?: unknown }).getResponse === 'function';
 
           const getErr = c.var?.getErrorByMessage || c.get('getErrorByMessage');
           let errObj =
             typeof getErr === 'function' ? getErr(name) : undefined;
 
-          if (!errObj && error instanceof HTTPException) {
-            const response = error.getResponse();
+          if (!errObj && isHttpException) {
+            const response = await (err as { getResponse: () => Response }).getResponse();
             const responseText = await response.text();
 
             c.set('result', {
