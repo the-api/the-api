@@ -10,6 +10,7 @@
         - [Get all](#get-all)
         - [Get one](#get-one)
         - [Delete](#delete)
+      - [Query parameters for GET all](#query-parameters-for-get-all)
     - [Validation example](#validation-example)
     - [Error example](#error-example)
   - [.env](#env)
@@ -74,6 +75,8 @@ curl http://localhost:7788/data/123
 ```
 
 ### DB + CRUD example
+
+After starting the server with files from the example, you can perform CRUD operations on `messages`. See [CRUD operations](#crud-operations) section for examples. For GET all, you can also use query parameters described in [Query parameters for GET all](#query-parameters-for-get-all) section.
 
 - You need to have PostgreSQL running and `the-api` installed.
 - Then, create `.env`, `./migrations/20260305134700_create_messages_table.ts` and `./index.ts` files with the following content:
@@ -228,6 +231,31 @@ await theAPI.up();
     "serverTime": "2026-03-06T12:53:16.420Z"
 }
 ```
+
+#### Query parameters for GET all
+
+| Parameter | Description | Example |
+| --- | --- | --- |
+| `_sort` | Sort by fields (`-field` for DESC, `random()` allowed) | `?_sort=-timeCreated,warningLevel` |
+| `_limit` | Limit number of records | `?_limit=20` |
+| `_page` | Page number (1-based) | `?_page=2&_limit=20` |
+| `_skip` | Skip records | `?_skip=10&_limit=20` |
+| `_unlimited` | Return all records (requires `CAN_GET_UNLIMITED=true`) | `?_unlimited=true` |
+| `_after` | Cursor pagination (works with `_sort` + `_limit`) | `?_sort=-timeCreated&_limit=20&_after=2026-03-06T12:52:43.568Z` |
+| `_fields` | Return only selected fields | `?_fields=id,warningLevel,body` |
+| `_join` | Include `joinOnDemand` relations | `?_join=author,comments` |
+| `_search` | Full-text/trigram search (when `searchFields` configured) | `?_search=test` |
+| `_lang` | Translate fields via `langs` table | `?_lang=de` |
+| `<field>` | Exact match (`IN` if repeated or array) | `?warningLevel=3` |
+| `<field>~` | Case-insensitive `LIKE` (`ilike`) for string fields | `?body~=%test%` |
+| `<field>!` | Not equal (`NOT IN` for array/repeated values) | `?warningLevel!=1` |
+| `_null_<field>` | `IS NULL` filter (for nullable columns) | `?_null_timeUpdated=1` |
+| `_not_null_<field>` | `IS NOT NULL` filter (for nullable columns) | `?_not_null_timeUpdated=1` |
+| `_from_<field>` | Range lower bound (`>=`) for non-boolean columns | `?_from_warningLevel=2` |
+| `_to_<field>` | Range upper bound (`<=`) for non-boolean columns | `?_to_warningLevel=3` |
+| `_in_<field>` | `IN` from JSON array for non-boolean columns | `?_in_id=[1,2,3]` |
+| `_not_in_<field>` | `NOT IN` from JSON array for non-boolean columns | `?_not_in_id=[4,5]` |
+
 
 ### Validation example
 
