@@ -1,3 +1,4 @@
+export { cors } from 'hono/cors'
 export { Routings } from './Routings';
 export { TheAPI } from './TheApi';
 export { Db } from './Db';

@@ -17,6 +17,7 @@
     - [Fields Description](#fields-description)
   - [Middlewares](#middlewares)
     - [logs](#logs)
+    - [cors](#cors)
     - [errors](#errors)
       - [User-defined error](#user-defined-error)
       - [User-defined error with additional information](#user-defined-error-with-additional-information)
@@ -385,6 +386,32 @@ Output:
 [2026-03-05T15:33:14.728Z] [j9szsmhn] [GET] [/data/123] [2] params: [object Object]
 [2026-03-05T15:33:14.728Z] [j9szsmhn] [GET] [/data/123] [2] {"foo":"bar"}
 [2026-03-05T15:33:14.728Z] [j9szsmhn] [GET] [/data/123] [2] [end]
+```
+
+### cors
+
+`cors` is re-exported from `hono/cors`.
+
+Docs: https://hono.dev/docs/middleware/builtin/cors
+
+If you need to enable CORS for all methods on all routes, use `*`:
+
+```typescript
+import { Routings, TheAPI, cors } from 'the-api';
+
+const router = new Routings();
+
+router.get('/data', async (c) => {
+  c.set('result', { ok: true });
+});
+
+const theAPI = new TheAPI({
+  routings: [router],
+});
+
+theAPI.app.use('*', cors());
+
+await theAPI.up();
 ```
 
 ### errors
