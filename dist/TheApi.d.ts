@@ -24,6 +24,8 @@ export declare class TheAPI {
     private collectErrorsAndTemplates;
     private registerGlobalMiddleware;
     private registerDbMiddleware;
+    private inferCrudMethodsFromRoles;
+    private addCrudRoutePermissions;
     private registerRoutes;
 }
 //# sourceMappingURL=TheApi.d.ts.map

@@ -1,5 +1,8 @@
 import { CrudBuilder, Routings as ExternalRoutings } from 'the-api-routings';
-import type { MethodsType } from 'the-api-routings';
+import type {
+  MethodsType,
+  CrudBuilderOptionsType as ExternalCrudBuilderOptionsType,
+} from 'the-api-routings';
 import type { CrudBuilderOptionsType } from './types';
 import { createCrudValidationMiddleware } from './Validatior';
 import { normalizeCrudConfig } from './crudConfig';
@@ -14,8 +17,8 @@ type CrudPermissionMeta = {
 export class Routings extends ExternalRoutings {
   crudPermissionsMeta: CrudPermissionMeta[] = [];
 
-  override crud(params: CrudBuilderOptionsType): void {
-    const normalizedParams = normalizeCrudConfig(params);
+  override crud(params: ExternalCrudBuilderOptionsType): void {
+    const normalizedParams = normalizeCrudConfig(params as unknown as CrudBuilderOptionsType);
     const { prefix, table, permissions } = normalizedParams;
     const p = `/${prefix || table}`.replace(/^\/+/, '/');
     const permissionPrefix = p.replace(/^\//, '');

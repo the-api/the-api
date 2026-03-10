@@ -1,3 +1,8 @@
+export { cors } from 'hono/cors';
+export { csrf } from 'hono/csrf';
+export { compress } from 'hono/compress';
+export { etag } from 'hono/etag';
+export { bodyLimit } from './bodyLimit';
 export { Routings } from './Routings';
 export { TheAPI } from './TheApi';
 export { Db } from './Db';

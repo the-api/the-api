@@ -1,6 +1,13 @@
 import { Routings as ExternalRoutings } from 'the-api-routings';
-import type { CrudBuilderOptionsType } from './types';
+import type { CrudBuilderOptionsType as ExternalCrudBuilderOptionsType } from 'the-api-routings';
+type CrudPermissionMeta = {
+    path: string;
+    permissionPrefix: string;
+    methodsConfigured: boolean;
+};
 export declare class Routings extends ExternalRoutings {
-    crud(params: CrudBuilderOptionsType): void;
+    crudPermissionsMeta: CrudPermissionMeta[];
+    crud(params: ExternalCrudBuilderOptionsType): void;
 }
+export {};
 //# sourceMappingURL=Routings.d.ts.map

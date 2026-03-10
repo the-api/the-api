@@ -2,7 +2,7 @@ import type { Context, MiddlewareHandler, Handler } from 'hono';
 import type { SocketAddress } from 'bun';
 import type { Knex } from 'knex';
 import type { H } from 'hono/types';
-import type { Routings, CrudBuilderOptionsType as ExternalCrudOpts } from 'the-api-routings';
+import type { Routings } from 'the-api-routings';
 import type { Roles } from 'the-api-roles';
 import type { Files } from './Files';
 export type { MiddlewareHandler, Handler };
@@ -158,10 +158,12 @@ export type CrudBuilderJoinType = {
 export type CrudBuilderPermissionsType = {
     methods?: (MethodType | '*')[];
     owner?: string[];
-    fields?: {
-        viewable?: Record<string, string[]>;
-        editable?: Record<string, string[]>;
-    };
+};
+export type CrudBuilderFieldRulesType = {
+    hidden?: string[];
+    readOnly?: string[];
+    visibleFor?: Record<string, string[]>;
+    editableFor?: Record<string, string[]>;
 };
 export type ValidationType = 'string' | 'number' | 'boolean' | 'date' | 'enum' | 'array' | 'object';
 export type ValidationFieldType = ValidationType | ValidationType[];
@@ -197,7 +199,7 @@ export type CrudValidationOptions = {
         patch?: ValidationSection;
     };
 };
-export type CrudBuilderOptionsType = ExternalCrudOpts & {
+export type CrudBuilderOptionsType = {
     c?: Context;
     table: string;
     prefix?: string;
@@ -211,9 +213,7 @@ export type CrudBuilderOptionsType = ExternalCrudOpts & {
     translate?: string[];
     searchFields?: string[];
     requiredFields?: string[];
-    hiddenFields?: string[];
-    readOnlyFields?: string[];
-    showFieldsByPermission?: Record<string, string[]>;
+    fieldRules?: CrudBuilderFieldRulesType;
     permissions?: CrudBuilderPermissionsType;
     defaultWhere?: fieldRecordType;
     defaultWhereRaw?: string;
