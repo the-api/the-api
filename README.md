@@ -12,6 +12,8 @@
         - [Delete](#delete)
       - [Query parameters for GET all](#query-parameters-for-get-all)
     - [Validation example](#validation-example)
+    - [Field rules example](#field-rules-example)
+    - [Permissions example](#permissions-example)
     - [Error example](#error-example)
   - [.env](#env)
   - [Response structure](#response-structure)
@@ -317,6 +319,101 @@ router.crud({
 
 Zod integration example:
 https://github.com/the-api/the-api-validators-zod
+
+### Field rules example
+
+`fieldRules` is the only supported structure for field-level access configuration.
+
+```js
+import { roles } from 'the-api-roles';
+import { Routings, TheAPI } from 'the-api';
+
+roles.init({
+  root: ['*'],
+  admin: ['users.getFullInfo', 'users.editEmail'],
+  registered: ['users.getViews'],
+  owner: ['users.getFullInfo'], // virtual owner permissions
+});
+
+const router = new Routings();
+
+router.crud({
+  table: 'users',
+
+  fieldRules: {
+    hidden: ['password', 'salt'], // always hidden
+    readOnly: ['emailVerified'],  // not writable via POST/PATCH
+    visibleFor: {
+      'users.getFullInfo': ['email', 'phone', 'timeCreated'],
+      'users.getViews': ['views'],
+    },
+    editableFor: {
+      'users.editEmail': ['email'],
+    },
+  },
+});
+
+const theAPI = new TheAPI({ roles, routings: [router] });
+```
+
+How `fieldRules` works:
+- `hidden`: fields are removed from response by default.
+- `readOnly`: fields are filtered out from incoming `POST`/`PATCH` payloads.
+- `hidden` fields are always added to read-only set.
+- `visibleFor`: permission -> fields mapping for showing hidden fields.
+- owner visibility is supported: if the record belongs to current user (`userId` by default), owner permissions are used for owner-view rules.
+
+Notes:
+- field-level behavior is configured only via `fieldRules`.
+- If `readOnly` is not provided, default readonly fields are used: `id`, `timeCreated`, `timeUpdated`, `timeDeleted`, `isDeleted`.
+
+### Permissions example
+
+```js
+import { roles } from 'the-api-roles';
+import { Routings, TheAPI } from 'the-api';
+
+roles.init({
+  root: ['*'], // all permissions
+  admin: [
+    '_.registered',       // nested permissions: all permissions of registered role
+    'users.getFullInfo',  // get full info of users
+    'users.editEmail',    // edit email
+    'testNews.*'          // all permissions for testNews
+  ],
+  registered: ['testNews.get', 'users.get'], // only get permissions for testNews and users
+  owner: ['users.getFullInfo', 'users.editEmail'], // virtual role, resolved per record
+});
+
+const router = new Routings({ migrationDirs: ['./tests/migrations'] });
+
+router.crud({
+  table: 'testNews',
+
+  permissions: {
+    methods: ['POST', 'PATCH', 'DELETE'], // explicit protection for selected CRUD methods
+    owner: ['testNews.getFullInfo'], // explicit owner permissions for this CRUD
+  },
+});
+
+const theAPI = new TheAPI({ roles, routings: [router] });
+```
+
+How `permissions` works:
+- `methods`: enables route-level role check for selected CRUD methods.
+- `methods` accepts `['GET', 'POST', 'PATCH', 'DELETE']` or `['*']` (uppercase).
+- Mapping to routes:
+  - `GET` protects both `/<prefix|table>` and `/<prefix|table>/:id`
+  - `POST` protects only `/<prefix|table>`
+  - `PATCH` and `DELETE` protect `/<prefix|table>/:id`
+- If `permissions.methods` is not provided, methods are inferred automatically from role permissions:
+  - the system scans all role values and finds `<prefix|table>.<method>` and `<prefix|table>.*`
+  - example: role permission `users.delete` -> inferred `methods: ['DELETE']`
+  - if no matching permissions exist, method-level protection is not added
+- If `permissions.methods` is provided, it overrides auto-inference.
+- `permissions.owner`: owner-specific permissions for field visibility rules.
+  - If omitted, and roles service exists, owner permissions are resolved from role name `owner`.
+- field visibility/editability rules are configured in `fieldRules` (`visibleFor`, `editableFor`).
 
 ### Error example
 

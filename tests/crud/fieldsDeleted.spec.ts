@@ -9,10 +9,12 @@ router.crud({
   aliases: {
     name: 'newsName',
   },
-  hiddenFields: [
-    'timeCreated',
-    'views',
-  ],
+  fieldRules: {
+    hidden: [
+      'timeCreated',
+      'views',
+    ],
+  },
   includeDeleted: true,
   deletedReplacements: {
     name: 'Deleted News',

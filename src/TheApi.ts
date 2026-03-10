@@ -3,6 +3,7 @@ import { serve } from "@hono/node-server";
 import { RegExpRouter } from 'hono/router/reg-exp-router';
 import { resolve } from 'path';
 import { Routings } from 'the-api-routings';
+import type { MethodsType } from 'the-api-routings';
 import { Db } from './Db';
 import { beginRoute, endRoute } from './middlewares/default';
 import { relationsRoute } from './middlewares/relations';
@@ -25,6 +26,18 @@ const {
   DB_HOST: dbHost,
   DB_WRITE_HOST: dbHostWrite,
 } = process.env;
+
+const CRUD_METHODS: MethodsType[] = ['GET', 'POST', 'PATCH', 'DELETE'];
+
+type CrudPermissionMeta = {
+  path: string;
+  permissionPrefix: string;
+  methodsConfigured: boolean;
+};
+
+type RoutingsWithCrudMeta = RoutingsType & {
+  crudPermissionsMeta?: CrudPermissionMeta[];
+};
 
 export class TheAPI {
   app: Hono<AppEnv>;
@@ -230,6 +243,58 @@ export class TheAPI {
     });
   }
 
+  private inferCrudMethodsFromRoles(permissionPrefix: string): MethodsType[] {
+    if (!this.roles) return [];
+
+    const mapping = this.roles.rolePermissionMapping;
+    if (!mapping || typeof mapping !== 'object') return [];
+
+    const result = new Set<MethodsType>();
+
+    for (const permissionMap of Object.values(mapping)) {
+      if (!permissionMap || typeof permissionMap !== 'object') continue;
+
+      for (const permission of Object.keys(permissionMap)) {
+        const [prefix, action, ...rest] = permission.split('.');
+        if (rest.length || !prefix || !action) continue;
+        if (prefix !== permissionPrefix) continue;
+
+        const method = action.toUpperCase();
+        if (method === '*') {
+          for (const crudMethod of CRUD_METHODS) result.add(crudMethod);
+          continue;
+        }
+
+        if (CRUD_METHODS.includes(method as MethodsType)) {
+          result.add(method as MethodsType);
+        }
+      }
+    }
+
+    return CRUD_METHODS.filter((method) => result.has(method));
+  }
+
+  private addCrudRoutePermissions(
+    routesPermissions: Record<string, string[]>,
+    { path, permissionPrefix }: CrudPermissionMeta,
+    methods: MethodsType[],
+  ): void {
+    const register = (routePath: string, method: MethodsType): void => {
+      const key = `${method} ${routePath}`;
+      const permission = `${permissionPrefix}.${method.toLowerCase()}`;
+
+      if (!routesPermissions[key]) routesPermissions[key] = [];
+      if (!routesPermissions[key].includes(permission)) {
+        routesPermissions[key].push(permission);
+      }
+    };
+
+    for (const method of methods) {
+      if (method === 'POST' || method === 'GET') register(path, method);
+      if (method !== 'POST') register(`${path}/:id`, method);
+    }
+  }
+
   private registerRoutes(): void {
     const rolesRoute = new Routings();
     if (this.roles) {
@@ -247,7 +312,16 @@ export class TheAPI {
       endRoute,
     ];
 
-    for (const { routes, routesPermissions } of routesArr) {
+    for (const routing of routesArr as RoutingsWithCrudMeta[]) {
+      if (this.roles && Array.isArray(routing.crudPermissionsMeta)) {
+        for (const meta of routing.crudPermissionsMeta) {
+          if (meta.methodsConfigured) continue;
+          const methods = this.inferCrudMethodsFromRoles(meta.permissionPrefix);
+          this.addCrudRoutePermissions(routing.routesPermissions, meta, methods);
+        }
+      }
+
+      const { routes, routesPermissions } = routing;
       this.roles?.addRoutePermissions(routesPermissions);
 
       for (const route of routes) {

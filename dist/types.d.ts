@@ -156,7 +156,7 @@ export type CrudBuilderJoinType = {
     permission?: string;
 };
 export type CrudBuilderPermissionsType = {
-    protectedMethods?: (MethodType | '*')[];
+    methods?: (MethodType | '*')[];
     owner?: string[];
     fields?: {
         viewable?: Record<string, string[]>;

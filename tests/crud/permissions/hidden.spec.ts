@@ -9,25 +9,20 @@ roles.init({
   admin: ['testNews.getFullInfo'],
   manager: ['_.registered'],
   registered: ['testNews.getViews'],
+  owner: ['testNews.getFullInfo'], // virtual role, resolved per record
 });
 
 const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 
 router.crud({
   table: 'testNews',
-  hiddenFields: ['timeCreated', 'views'],
-
-  permissions: {
-    owner: ['testNews.getFullInfo'],
-
-    fields: {
-      viewable: {
-        'testNews.getFullInfo': ['timeCreated', 'views'],
-        'testNews.getViews': ['views'],
-      },
-    }
+  fieldRules: {
+    hidden: ['timeCreated', 'views'],
+    visibleFor: {
+      'testNews.getFullInfo': ['timeCreated', 'views'],
+      'testNews.getViews': ['views'],
+    },
   },
-
 });
 
 const theAPI = new TheAPI({ roles, routings: [router] });

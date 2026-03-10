@@ -123,7 +123,7 @@ test
 │   ├── pagination.spec.ts
 │   ├── permissions
 │   │   ├── hidden.spec.ts
-│   │   ├── protectedMethods.spec.ts
+│   │   ├── methods.spec.ts
 │   │   └── roles.spec.ts
 │   ├── relations.spec.ts
 │   ├── search.spec.ts
@@ -2139,7 +2139,7 @@ export type CrudBuilderJoinType = {
 };
 
 export type CrudBuilderPermissionsType = {
-  protectedMethods?: (MethodType | '*')[];
+  methods?: (MethodType | '*')[];
   owner?: string[];
   fields?: {
     viewable?: Record<string, string[]>;
@@ -3934,7 +3934,7 @@ describe('Hidden', () => {
 });
 ```
 
-### test/crud/permissions/protectedMethods.spec.ts
+### test/crud/permissions/methods.spec.ts
 ```ts
 import { expect, test, describe } from 'bun:test';
 import { roles } from 'the-api-roles';
@@ -3952,13 +3952,13 @@ const router = new Routings({ migrationDirs: ['./test/migrations'] });
 
 router.crud({
   table: 'testNews',
-  permissions: { protectedMethods: ['*'] },
+  permissions: { methods: ['*'] },
 });
 
 router.crud({
   table: 'testNews',
   prefix: 'testNewsDeletedProtected',
-  permissions: { protectedMethods: ['DELETE'] },
+  permissions: { methods: ['DELETE'] },
 });
 
 const theAPI = new TheAPI({ roles, routings: [router] });
@@ -4191,7 +4191,7 @@ router.crud({
   readOnlyFields: ['roles', 'email', 'emailToChange'],
 
   permissions: {
-    protectedMethods: ['*'], // => create permissions: S(table || prefix).[get|post|patch|put|delete]
+    methods: ['*'], // => create permissions: S(table || prefix).[get|post|patch|put|delete]
     owner: ['users.delete', 'users.getFullInfo', 'users.editEmail'],
 
     fields: {

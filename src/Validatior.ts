@@ -9,6 +9,7 @@ import type {
   ValidationSchema,
   ValidationSection,
 } from './types';
+import { normalizeCrudConfig } from './crudConfig';
 
 const DEFAULT_READONLY_FIELDS = [
   'id',
@@ -520,12 +521,13 @@ export const buildCrudValidationSchemaFromTable = (
   c: AppContext,
   params: CrudBuilderOptionsType,
 ): CrudValidationSchema => {
-  const columns = resolveTableColumns(c, params);
+  const normalizedParams = normalizeCrudConfig(params);
+  const columns = resolveTableColumns(c, normalizedParams);
   const columnEntries = Object.entries(columns);
   const columnNames = columnEntries.map(([name]) => name);
   const joinSelectableNames = [
-    ...(params.join || []),
-    ...(params.joinOnDemand || []),
+    ...(normalizedParams.join || []),
+    ...(normalizedParams.joinOnDemand || []),
   ]
     .flatMap((item) => [item.table, item.alias])
     .filter((name): name is string => typeof name === 'string' && !!name);
@@ -537,7 +539,7 @@ export const buildCrudValidationSchemaFromTable = (
   const primaryKey = columnEntries.find(([, col]) => col.is_primary_key)?.[0]
     || (columns.id ? 'id' : columnNames[0]);
 
-  const readOnly = params.readOnlyFields || DEFAULT_READONLY_FIELDS;
+  const readOnly = normalizedParams.readOnlyFields || DEFAULT_READONLY_FIELDS;
 
   const paramsSchema: ValidationSchema = {};
   if (primaryKey && columns[primaryKey]) {
@@ -575,7 +577,7 @@ export const buildCrudValidationSchemaFromTable = (
       items: {
         type: 'enum',
         enum: Array.from(new Set(
-          (params.joinOnDemand || [])
+          (normalizedParams.joinOnDemand || [])
             .flatMap((item) => [item.table, item.alias])
             .filter((name): name is string => typeof name === 'string' && !!name),
         )),

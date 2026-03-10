@@ -4,9 +4,15 @@ import { Routings, TheAPI } from '../../../src';
 import { getTestClient } from '../../lib';
 
 roles.init({
-  root: ['*'],
-  admin: ['_.registered', 'users.getFullInfo', 'users.editEmail', 'testNews.*'],
-  registered: ['testNews.get', 'users.get'],
+  root: ['*'], // all permissions
+  admin: [
+    '_.registered',       // nested permissions: all permissions of registered role
+    'users.getFullInfo',  // get full info of users
+    'users.editEmail',    // edit email
+    'testNews.*'          // all permissions for testNews
+  ],
+  registered: ['testNews.get', 'users.get'], // only get permissions for testNews and users
+  owner: ['users.getFullInfo', 'users.editEmail'], // virtual role, resolved per record
 });
 
 const router = new Routings({ migrationDirs: ['./tests/migrations'] });
@@ -14,22 +20,21 @@ const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 router.crud({
   table: 'testNews',
 
-  hiddenFields: ['password', 'salt'], // they're hidden everywhere and 're also readonly
-  readOnlyFields: ['roles', 'email', 'emailToChange'],
-
+  fieldRules: {
+    hidden: ['password', 'salt'], // they're hidden everywhere and 're also readonly
+    readOnly: ['roles', 'email', 'emailToChange'],
+    visibleFor: {
+      'users.getFullInfo': ['email', 'emailToChange', 'externalProfiles', 'deleted'],
+    },
+    editableFor: {
+      'users.editEmail': ['email', 'emailToChange'],
+      'users.editRoles': ['roles'],
+    },
+  },
+  
   permissions: {
-    protectedMethods: ['*'], // => create permissions: S(table || prefix).[get|post|patch|delete]
-    owner: ['users.delete', 'users.getFullInfo', 'users.editEmail'],
-
-    fields: {
-      viewable: {
-        'users.getFullInfo': ['email', 'emailToChange', 'externalProfiles', 'deleted'],
-      },
-      editable: {
-        'users.editEmail': ['email'],
-        'users.editRoles': ['roles'],
-      },
-    }
+    methods: ['*'], // add permissions for all methods
+    // methods: ['POST', 'PATCH', 'DELETE'], // add permissions for create, update and delete
   },
 });
 

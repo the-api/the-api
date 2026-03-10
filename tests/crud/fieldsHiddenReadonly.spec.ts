@@ -9,8 +9,10 @@ const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 router.crud({
   table: 'testNews',
 
-  hiddenFields: ['timeUpdated', 'typeId'], // they're hidden everywhere and 're also readonly
-  readOnlyFields: ['timeCreated', 'views'],
+  fieldRules: {
+    hidden: ['timeUpdated', 'typeId'], // they're hidden everywhere and 're also readonly
+    readOnly: ['timeCreated', 'views'],
+  },
 });
 
 const theAPI = new TheAPI({ roles, routings: [router] });

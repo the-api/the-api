@@ -14,13 +14,13 @@ const router = new Routings({ migrationDirs: ['./tests/migrations'] });
 
 router.crud({
   table: 'testNews',
-  permissions: { protectedMethods: ['*'] },
+  permissions: { methods: ['*'] },
 });
 
 router.crud({
   table: 'testNews',
   prefix: 'testNewsDeletedProtected',
-  permissions: { protectedMethods: ['DELETE'] },
+  permissions: { methods: ['DELETE'] },
 });
 
 const theAPI = new TheAPI({ roles, routings: [router] });
