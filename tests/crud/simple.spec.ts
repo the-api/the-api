@@ -1,13 +1,10 @@
 import { expect, test, describe } from 'bun:test';
-import { getTestClient } from '../lib';
-import { Routings, TheAPI } from '../../src';
+import { testClient } from '../lib';
 
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
-
-router.crud({ table: 'testNews' });
-
-const theAPI = new TheAPI({ routings: [router] });
-const client = await getTestClient(theAPI);
+const { theAPI, client } = await testClient({
+  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  crudParams: [{ table: 'testNews' }],
+});
 
 describe('simple CRUD requests', () => {
   test('init', async () => {

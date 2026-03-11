@@ -1,22 +1,17 @@
 import { expect, test, describe } from 'bun:test';
 import { DateTime } from'luxon';
-import { roles } from 'the-api-roles';
-import { Routings, TheAPI } from '../../src';
-import { getTestClient } from '../lib';
+import { testClient } from '../lib';
 
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
-
-router.crud({
-  table: 'testNews',
-
-  fieldRules: {
-    hidden: ['timeUpdated', 'typeId'], // they're hidden everywhere and 're also readonly
-    readOnly: ['timeCreated', 'views'],
-  },
+const { theAPI, client } = await testClient({
+  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  crudParams: [{
+    table: 'testNews',
+    fieldRules: {
+      hidden: ['timeUpdated', 'typeId'], // they're hidden everywhere and 're also readonly
+      readOnly: ['timeCreated', 'views'],
+    },
+  }],
 });
-
-const theAPI = new TheAPI({ roles, routings: [router] });
-const client = await getTestClient(theAPI);
 
 describe('Hidden and Readonly Fields', () => {
   describe('init', () => {

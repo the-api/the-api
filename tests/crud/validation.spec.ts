@@ -1,70 +1,69 @@
 import { describe, expect, test } from 'bun:test';
-import { getTestClient } from '../../tests/lib';
-import { Routings, TheAPI } from '../../src';
+import { testClient } from '../../tests/lib';
 
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
+const migrationDirs = ['./tests/migrations'];
 
-router.crud({
-  table: 'messages',
-  prefix: 'messagesAuto',
-});
-
-router.crud({
-  table: 'messages',
-  prefix: 'messagesCustomBody',
-  validation: {
-    body: {
-      post: {
-        warningLevel: { type: 'number', min: 1, max: 3 },
-        body: { type: 'string', required: true },
+const crudParams = [
+  {
+    table: 'messages',
+    prefix: 'messagesAuto',
+  },
+  {
+    table: 'messages',
+    prefix: 'messagesCustomBody',
+    validation: {
+      body: {
+        post: {
+          warningLevel: { type: 'number', min: 1, max: 3 },
+          body: { type: 'string', required: true },
+        },
       },
     },
   },
-});
-
-router.crud({
-  table: 'messages',
-  prefix: 'messagesNoValidation',
-  validation: {},
-});
-
-router.crud({
-  table: 'messages',
-  prefix: 'messagesNoParamsValidation',
-  validation: {
-    params: {},
+  {
+    table: 'messages',
+    prefix: 'messagesNoValidation',
+    validation: {},
   },
-});
-
-router.crud({
-  table: 'messages',
-  prefix: 'messagesFunctionValidation',
-  validation: {
-    body: {
-      post: () => ({
-        warningLevel: { type: 'number', min: 0, max: 2 },
-        body: { type: 'string', required: true },
-      }),
-      patch: () => ({
-        validate: (value: unknown) => {
-          const data = (value || {}) as Record<string, unknown>;
-          if (typeof data.warningLevel === 'undefined') return true;
-          if (typeof data.warningLevel === 'number' && data.warningLevel <= 5) return true;
-
-          return [{
-            field: 'warningLevel',
-            message: 'warningLevel must be a number less than or equal to 5',
-            expected: { type: 'number', max: 5 },
-            value: data.warningLevel,
-          }];
-        },
-      }),
+  {
+    table: 'messages',
+    prefix: 'messagesNoParamsValidation',
+    validation: {
+      params: {},
     },
   },
-});
+  {
+    table: 'messages',
+    prefix: 'messagesFunctionValidation',
+    validation: {
+      body: {
+        post: () => ({
+          warningLevel: { type: 'number', min: 0, max: 2 },
+          body: { type: 'string', required: true },
+        }),
+        patch: () => ({
+          validate: (value: unknown) => {
+            const data = (value || {}) as Record<string, unknown>;
+            if (typeof data.warningLevel === 'undefined') return true;
+            if (typeof data.warningLevel === 'number' && data.warningLevel <= 5) return true;
 
-const theAPI = new TheAPI({ routings: [router] });
-const client = await getTestClient(theAPI);
+            return [{
+              field: 'warningLevel',
+              message: 'warningLevel must be a number less than or equal to 5',
+              expected: { type: 'number', max: 5 },
+              value: data.warningLevel,
+            }];
+          },
+        }),
+      },
+    },
+  }
+];
+
+const { theAPI, client } = await testClient({
+  migrationDirs,
+  crudParams,
+});
 
 describe('crud validation', () => {
   test('init', async () => {

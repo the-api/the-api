@@ -5078,7 +5078,7 @@ describe('langs', () => {
 import jwt from 'jsonwebtoken';
 import fs from 'fs/promises';
 import path from 'path';
-import { testClient } from 'hono/testing';
+import { getTestClient } from 'hono/testing';
 import { TheAPI } from '../src/index.ts';
 import { Db } from '../src/Db.ts';
 import type { Knex } from 'knex';
@@ -5177,7 +5177,7 @@ export class TestClient {
         : this.headers,
     };
     const pathArr = path.split('/').slice(1);
-    const client = testClient<any>(this.app);
+    const client = getTestClient<any>(this.app);
 
     const res = await pathArr.reduce(
       (acc: any, key) => acc[key],

@@ -1,17 +1,18 @@
 import { expect, test, describe } from 'bun:test';
-import { getTestClient } from '../lib';
-import { Routings, TheAPI } from '../../src';
-import type { AppContext } from '../../src';
+import { testClient } from '../lib';
+import type { AppContext, TestClientOptionsType } from '../../src';
 
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
+const newRoutings: NonNullable<TestClientOptionsType['newRoutings']> = (router) => {
+  router.get('/check-migration', async (c: AppContext) => {
+    await c.var.dbWrite('testNews').insert({ name: 'test' });
+    c.set('result', await c.var.db('testNews'));
+  });
+};
 
-router.get('/check-migration', async (c: AppContext) => {
-  await c.var.dbWrite('testNews').insert({ name: 'test' });
-  c.set('result', await c.var.db('testNews'));
+const { theAPI, client } = await testClient({
+  migrationDirs: ['./tests/migrations'],
+  newRoutings,
 });
-
-const theAPI = new TheAPI({ routings: [router] });
-const client = await getTestClient(theAPI);
 
 describe('DB', async () => {
   test('init', async () => {

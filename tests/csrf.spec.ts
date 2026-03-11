@@ -1,16 +1,25 @@
 import { describe, expect, test } from 'bun:test';
-import { Routings, TheAPI, csrf } from '../src';
+import { createRoutings, testClient } from './lib';
+import { csrf } from '../src';
 
-const router = new Routings();
-
-router.post('/csrf', async (c) => {
+const defaultRouter = createRoutings();
+defaultRouter.post('/csrf', async (c) => {
   c.set('result', { ok: true });
 });
 
-const defaultApi = new TheAPI({ routings: [router] });
+const { theAPI: defaultApi } = await testClient({
+  routings: [defaultRouter],
+});
 defaultApi.app.use('*', csrf());
 
-const trustedOriginApi = new TheAPI({ routings: [router] });
+const trustedOriginRouter = createRoutings();
+trustedOriginRouter.post('/csrf', async (c) => {
+  c.set('result', { ok: true });
+});
+
+const { theAPI: trustedOriginApi } = await testClient({
+  routings: [trustedOriginRouter],
+});
 trustedOriginApi.app.use('*', csrf({ origin: 'https://app.example.com' }));
 
 describe('csrf', () => {

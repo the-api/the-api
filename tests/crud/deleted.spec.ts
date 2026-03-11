@@ -1,35 +1,33 @@
 import { expect, test, describe } from 'bun:test';
-import { getTestClient } from '../lib';
-import { Routings, TheAPI } from '../../src';
+import { testClient } from '../lib';
 
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
-
-router.crud({
-  table: 'testTypes',
+const { theAPI, client } = await testClient({
+  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  crudParams: [
+    {
+      table: 'testTypes',
+    },
+    {
+      table: 'testTypes',
+      prefix: 'testTypesWithDeleted',
+      includeDeleted: true,
+      deletedReplacements: {
+        name: 'Deleted News',
+      },
+    },
+    {
+      table: 'testNews',
+    },
+    {
+      table: 'testNews',
+      prefix: 'testNewsWithDeleted',
+      includeDeleted: true,
+      deletedReplacements: {
+        name: 'Deleted News',
+      },
+    },
+  ],
 });
-router.crud({
-  table: 'testTypes',
-  prefix: 'testTypesWithDeleted',
-  includeDeleted: true,
-  deletedReplacements: {
-    name: 'Deleted News',
-  },
-});
-
-router.crud({
-  table: 'testNews',
-});
-router.crud({
-  table: 'testNews',
-  prefix: 'testNewsWithDeleted',
-  includeDeleted: true,
-  deletedReplacements: {
-    name: 'Deleted News',
-  },
-});
-
-const theAPI = new TheAPI({ routings: [router] });
-const client = await getTestClient(theAPI);
 
 describe('GET deleted', () => {
   describe('init', () => {

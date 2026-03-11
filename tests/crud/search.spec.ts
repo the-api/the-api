@@ -1,17 +1,13 @@
 import { expect, test, describe } from 'bun:test';
-import { DateTime } from'luxon';
-import { getTestClient } from '../lib';
-import { Routings, TheAPI } from '../../src';
+import { testClient } from '../lib';
 
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
-
-router.crud({
-  table: 'testNews',
-  searchFields: ['name'],
+const { theAPI, client } = await testClient({
+  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  crudParams: [{
+    table: 'testNews',
+    searchFields: ['name'],
+  }],
 });
-
-const theAPI = new TheAPI({ routings: [router] });
-const client = await getTestClient(theAPI);
 
 describe('GET search', () => {
   describe('init', () => {

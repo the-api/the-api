@@ -1,23 +1,22 @@
 import { expect, test, describe } from 'bun:test';
-import { getTestClient } from '../lib';
-import { Routings, TheAPI } from '../../src';
+import { testClient } from '../lib';
 import {type  CrudBuilderOptionsType } from '../../src';
 
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
-
-const typeDefinition: CrudBuilderOptionsType = { table: 'testTypes' };
-
-router.crud(typeDefinition);
-
-router.crud({
-  table: 'testTypeAges',
-  relations: {
-    typeId: typeDefinition,
-  },
+const { theAPI, client } = await testClient({
+  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  crudParams: (() => {
+    const typeDefinition: CrudBuilderOptionsType = { table: 'testTypes' };
+    return [
+      typeDefinition,
+      {
+        table: 'testTypeAges',
+        relations: {
+          typeId: typeDefinition,
+        },
+      },
+    ];
+  })(),
 });
-
-const theAPI = new TheAPI({ routings: [router] });
-const client = await getTestClient(theAPI);
 
 describe('GET relations', () => {
   describe('init', () => {

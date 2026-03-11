@@ -1,10 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { getTestClient } from './lib';
-import { TheAPI } from '../src';
+import { testClient } from './lib';
 import { info, logs, status } from '../src/middlewares';
 
-const theAPI = new TheAPI({ routings: [logs, status, info] });
-const client = await getTestClient(theAPI);
+const { theAPI, client } = await testClient({ routings: [logs, status, info] });
 
 describe('info', () => {
   test('init', async () => {

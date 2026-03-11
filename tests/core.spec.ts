@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { getTestClient } from './lib';
-import { Routings, TheAPI } from '../src';
+import { createRoutings, testClient } from './lib';
 import type { Context, Next } from 'hono';
 
-const router = new Routings();
+const router = createRoutings({});
 
 router.get('/', async (c: Context, n: Next) => {
   await n();
@@ -23,8 +22,7 @@ router.get('/search/:search', async (c: Context) => {
   c.set('result', c.req.param());
 });
 
-const theAPI = new TheAPI({ routings: [router] });
-const client = await getTestClient(theAPI);
+const { theAPI, client } = await testClient({ routings: [router] });
 
 describe('Core', () => {
   test('init', async () => {

@@ -1,35 +1,37 @@
 import { expect, test, describe } from 'bun:test';
-import { roles } from 'the-api-roles';
-import { Routings, TheAPI } from '../../../src';
-import { getTestClient } from '../../lib';
+import { testClient } from '../../lib';
 
-roles.init({
+const roles = {
   root: ['*'],
   admin: ['_.registered', 'testNews.*', 'testNewsDeletedProtected.*'],
   manager: ['_.registered', 'testNews.delete', 'testNewsDeletedProtected.delete'],
   registered: ['testNews.get', 'testNewsDeletedProtected.get'],
+};
+
+const migrationDirs = ['./tests/migrations'];
+
+const crudParams = [
+  {
+    table: 'testNews',
+    permissions: { methods: ['*'] },
+  },
+  {
+    table: 'testNews',
+    prefix: 'testNewsDeletedProtected',
+    permissions: { methods: ['DELETE'] },
+  },
+];
+
+const { theAPI, client, tokens } = await testClient({
+  migrationDirs,
+  crudParams,
+  roles,
 });
-
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
-
-router.crud({
-  table: 'testNews',
-  permissions: { methods: ['*'] },
-});
-
-router.crud({
-  table: 'testNews',
-  prefix: 'testNewsDeletedProtected',
-  permissions: { methods: ['DELETE'] },
-});
-
-const theAPI = new TheAPI({ roles, routings: [router] });
-const client = await getTestClient(theAPI);
-const { tokens } = client;
 
 describe('protected methods', () => {
   describe('init', () => {
     test('init', async () => {
+      await client.deleteTables();
       await theAPI.init();
     });
     });

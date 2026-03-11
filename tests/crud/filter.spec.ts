@@ -1,27 +1,26 @@
 import { expect, test, describe } from 'bun:test';
 import { DateTime } from'luxon';
-import { getTestClient } from '../lib';
-import { Routings, TheAPI } from '../../src';
+import { testClient } from '../lib';
 
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
-
-router.crud({ table: 'testTypes' });
-router.crud({ table: 'testNews' });
-router.crud({
-  table: 'testNews',
-  prefix: 'testAll',
-  join: [
+const { theAPI, client } = await testClient({
+  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  crudParams: [
+    { table: 'testTypes' },
+    { table: 'testNews' },
     {
-      table: 'testTypes',
-      where: '"testTypes".id = "testNews"."typeId"',
-      field: 'name',
-      alias: 'typeName',
-    }
-  ]
+      table: 'testNews',
+      prefix: 'testAll',
+      join: [
+        {
+          table: 'testTypes',
+          where: '"testTypes".id = "testNews"."typeId"',
+          field: 'name',
+          alias: 'typeName',
+        }
+      ]
+    },
+  ],
 });
-
-const theAPI = new TheAPI({ routings: [router] });
-const client = await getTestClient(theAPI);
 
 describe('GET filters', () => {
   describe('init', () => {

@@ -1,9 +1,7 @@
 import { expect, test, describe } from 'bun:test';
-import { roles } from 'the-api-roles';
-import { Routings, TheAPI } from '../../../src';
-import { getTestClient } from '../../lib';
+import { testClient } from '../../lib';
 
-roles.init({
+const roles = {
   root: ['*'], // all permissions
   admin: [
     '_.registered',       // nested permissions: all permissions of registered role
@@ -13,33 +11,32 @@ roles.init({
   ],
   registered: ['testNews.get', 'users.get'], // only get permissions for testNews and users
   owner: ['users.getFullInfo', 'users.editEmail'], // virtual role, resolved per record
-});
+};
 
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
+const { theAPI, client } = await testClient({
+  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  crudParams: [{
+    table: 'testNews',
 
-router.crud({
-  table: 'testNews',
-
-  fieldRules: {
-    hidden: ['password', 'salt'], // they're hidden everywhere and 're also readonly
-    readOnly: ['roles', 'email', 'emailToChange'],
-    visibleFor: {
-      'users.getFullInfo': ['email', 'emailToChange', 'externalProfiles', 'deleted'],
+    fieldRules: {
+      hidden: ['password', 'salt'], // they're hidden everywhere and 're also readonly
+      readOnly: ['roles', 'email', 'emailToChange'],
+      visibleFor: {
+        'users.getFullInfo': ['email', 'emailToChange', 'externalProfiles', 'deleted'],
+      },
+      editableFor: {
+        'users.editEmail': ['email', 'emailToChange'],
+        'users.editRoles': ['roles'],
+      },
     },
-    editableFor: {
-      'users.editEmail': ['email', 'emailToChange'],
-      'users.editRoles': ['roles'],
+    
+    permissions: {
+      methods: ['*'], // add permissions for all methods
+      // methods: ['POST', 'PATCH', 'DELETE'], // add permissions for create, update and delete
     },
-  },
-  
-  permissions: {
-    methods: ['*'], // add permissions for all methods
-    // methods: ['POST', 'PATCH', 'DELETE'], // add permissions for create, update and delete
-  },
+  }],
+  roles,
 });
-
-const theAPI = new TheAPI({ roles, routings: [router] });
-const client = await getTestClient(theAPI);
 
 const rootToken = client.generateGWT({ id: 1, roles: ['root'] });
 const adminToken = client.generateGWT({ id: 2, roles: ['admin'] });

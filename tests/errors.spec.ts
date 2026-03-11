@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { getTestClient } from './lib';
-import { Routings, TheAPI } from '../src';
+import { createRoutings, testClient } from './lib';
 import { errors } from '../src/middlewares';
 
-const router = new Routings();
+const router = createRoutings();
 
 router.get('/exception', async (c: any) => {
   c.this.line.throws.error();
@@ -20,7 +19,7 @@ router.get('/user-defined-error', async () => {
 router.get('/user-defined-error-addition', async (c: any) => {
   try {
     c.some.path();
-  } catch (err) {
+  } catch {
     throw new Error('USER_DEFINED_ERROR: additional information');
   }
 });
@@ -42,8 +41,7 @@ router.errors({
   }
 });
 
-const theAPI = new TheAPI({ routings: [errors, router] });
-const client = await getTestClient(theAPI);
+const { theAPI, client } = await testClient({ routings: [errors, router] });
 
 describe('errors', () => {
   test('init', async () => {

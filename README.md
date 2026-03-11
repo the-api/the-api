@@ -38,6 +38,7 @@
     - [Post route](#post-route)
     - [Patch route](#patch-route)
     - [Delete route](#delete-route)
+  - [TestClient For Integration Tests](#testclient-for-integration-tests)
 
 ## Examples
 
@@ -914,3 +915,141 @@ router.delete('/patch/:id', async (c: Context) => {
   const body = await c.req.json();
   c.set('result', body);
 });
+
+## TestClient For Integration Tests
+
+`testClient` lets you spin up `TheAPI` for tests and gives you convenient request helpers (`get/post/patch/delete`), generated JWT tokens, and utilities like `deleteTables`/`truncateTables`.
+
+Import:
+
+```typescript
+import { createRoutings, testClient } from 'the-api';
+```
+
+Parameters of `testClient(options?)`:
+
+- `migrationDirs?: string[]` - migration folders used by internal routings created inside `testClient`
+- `routingOptions?: { migrationDirs?: string[] }` - explicit routing options for internal routings (`crudParams` and `newRoutings`)
+- `crudParams?: CrudBuilderOptionsType[]` - list of `router.crud(...)` configs that will be registered automatically
+- `roles?: Roles | Record<string, string[]>` - roles instance or roles map (map is auto-initialized internally)
+- `routings?: Routings[]` - extra routings/middlewares you already created
+- `newRoutings?: (router: Routings) => void` - callback to append custom routes to a new internal `Routings` instance
+- `theApiOptions?: Omit<TheApiOptionsType, 'routings' | 'roles' | 'migrationDirs'>` - additional `TheAPI` options (for example `port`, `emailTemplates`)
+
+Helper:
+
+- `createRoutings(options?)` - shorthand for `new Routings(options)`, useful in tests for better readability and typed setup.
+
+What `testClient` returns:
+
+- `theAPI` - initialized `TheAPI` instance (call `await theAPI.init()` in tests)
+- `client` - request helper with methods: `get`, `post`, `patch`, `delete`, `postForm`, `postFormRequest`, `deleteTables`, `truncateTables`, `readFile`, `generateGWT`, `storeValue`, `getValue`
+- `tokens` - ready-to-use JWT tokens for default test users (`root`, `admin`, `registered`, `manager`, `unknown`, `noRole`, `noToken`)
+- `users` - default test users payload
+- `DateTime` - `luxon` `DateTime` export for convenience in tests
+
+Minimal example:
+
+```typescript
+import { test, expect } from 'bun:test';
+import { testClient } from 'the-api';
+
+const { theAPI, client } = await testClient({
+  crudParams: [{ table: 'messages' }],
+  migrationDirs: ['./migrations'],
+});
+
+test('messages list', async () => {
+  await theAPI.init();
+  const { result } = await client.get('/messages');
+  expect(Array.isArray(result)).toEqual(true);
+});
+```
+
+Example with all parameters and returned helpers:
+
+```typescript
+import { test, expect } from 'bun:test';
+import { Routings, middlewares, testClient } from 'the-api';
+
+const router = new Routings({ migrationDirs: ['./migrations'] });
+router.get('/ping', async (c) => c.set('result', { ok: true }));
+
+const roles = {
+  root: ['*'],
+  admin: ['messages.get'],
+};
+
+const {
+  theAPI,
+  client,
+  tokens,
+  users,
+  DateTime,
+} = await testClient({
+  migrationDirs: ['./migrations'],
+  crudParams: [{ table: 'messages' }],
+  roles,
+  routings: [middlewares.errors, router],
+  theApiOptions: { port: 7788, emailTemplates: { demo: { subject: 's', text: 't' } } },
+});
+
+test('full testClient usage', async () => {
+  await theAPI.init();
+  await client.post('/messages', { body: `created ${DateTime.now().toISO()}` }, tokens.root);
+  const { result } = await client.get('/messages', tokens.admin);
+  expect(result.length > 0).toEqual(true);
+  expect(users.root.id).toEqual(1);
+  await client.truncateTables('messages');
+  await client.deleteTables();
+});
+```
+
+Example with `createRoutings` + `routings`:
+
+```typescript
+import { test, expect } from 'bun:test';
+import { createRoutings, testClient } from 'the-api';
+import type { AppContext } from 'the-api';
+
+const router = createRoutings({ migrationDirs: ['./tests/migrations'] });
+
+router.get('/check-migration', async (c: AppContext) => {
+  await c.var.dbWrite('testNews').insert({ name: 'test' });
+  c.set('result', await c.var.db('testNews'));
+});
+
+const { theAPI, client } = await testClient({ routings: [router] });
+
+test('migration route', async () => {
+  await theAPI.init();
+  const { result } = await client.get('/check-migration');
+  expect(result[0].name).toEqual('test');
+});
+```
+
+Example with `newRoutings` (no manual router creation):
+
+```typescript
+import { test, expect } from 'bun:test';
+import { testClient } from 'the-api';
+import type { AppContext, TestClientOptionsType } from 'the-api';
+
+const newRoutings: NonNullable<TestClientOptionsType['newRoutings']> = (router) => {
+  router.get('/check-migration', async (c: AppContext) => {
+    await c.var.dbWrite('testNews').insert({ name: 'test' });
+    c.set('result', await c.var.db('testNews'));
+  });
+};
+
+const { theAPI, client } = await testClient({
+  migrationDirs: ['./tests/migrations'],
+  newRoutings,
+});
+
+test('migration route via newRoutings', async () => {
+  await theAPI.init();
+  const { result } = await client.get('/check-migration');
+  expect(result[0].name).toEqual('test');
+});
+```

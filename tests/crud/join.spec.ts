@@ -1,8 +1,7 @@
 import { expect, test, describe } from 'bun:test';
-import { getTestClient } from '../lib';
-import { Routings, TheAPI } from '../../src';
+import { createRoutings, testClient } from '../lib';
 
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
+const router = createRoutings({ migrationDirs: ['./tests/migrations'] });
 
 router.crud({ table: 'testTypes' });
 router.crud({ table: 'testTypeAges' });
@@ -103,8 +102,7 @@ router.crud({
   ]
 });
 
-const theAPI = new TheAPI({ routings: [router] });
-const client = await getTestClient(theAPI);
+const { theAPI, client } = await testClient({ routings: [router] });
 
 describe('GET join', () => {
   describe('init', () => {

@@ -1,20 +1,17 @@
 import { expect, test, describe } from 'bun:test';
-import { DateTime } from 'luxon';
-import { roles } from 'the-api-roles';
-import { Routings, TheAPI } from '../../../src';
-import { getTestClient } from '../../lib';
+import { testClient } from '../../lib';
 
-roles.init({
+const migrationDirs = ['./tests/migrations'];
+
+const roles = {
   root: ['*'],
   admin: ['testNews.getFullInfo'],
   manager: ['_.registered'],
   registered: ['testNews.getViews'],
   owner: ['testNews.getFullInfo'], // virtual role, resolved per record
-});
+};
 
-const router = new Routings({ migrationDirs: ['./tests/migrations'] });
-
-router.crud({
+const crudParams = [{
   table: 'testNews',
   fieldRules: {
     hidden: ['timeCreated', 'views'],
@@ -23,11 +20,13 @@ router.crud({
       'testNews.getViews': ['views'],
     },
   },
-});
+}];
 
-const theAPI = new TheAPI({ roles, routings: [router] });
-const client = await getTestClient(theAPI);
-const { tokens, users } = client;
+const { theAPI, client, tokens, users, DateTime } = await testClient({
+  crudParams,
+  migrationDirs,
+  roles,
+});
 
 describe('Hidden', () => {
   describe('init', () => {

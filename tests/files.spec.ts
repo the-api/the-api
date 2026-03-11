@@ -1,11 +1,9 @@
 import { describe, test, expect } from 'bun:test';
-import { Routings } from 'the-api-routings';
-import { getTestClient } from './lib';
-import { TheAPI, middlewares } from '../src';
+import { createRoutings, testClient } from './lib';
+import { middlewares } from '../src';
 import type { AppContext } from '../src';
 
-const router = new Routings();
-
+const router = createRoutings();
 router.post('/upload', async (c: AppContext) => {
   const body = await c.req.parseBody();
   const result = await c.var.files.upload(body.file as File, 'uploads');
@@ -19,11 +17,10 @@ router.post('/upload_files', async (c: AppContext) => {
   c.set('result', result);
 });
 
-const theAPI = new TheAPI({
-  port: 7788,
+const { theAPI, client } = await testClient({
   routings: [middlewares.files, router],
+  theApiOptions: { port: 7788 },
 });
-const client = await getTestClient(theAPI);
 
 describe('files', () => {
   test('init', async () => {

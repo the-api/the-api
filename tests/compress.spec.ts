@@ -1,13 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { Routings, TheAPI, compress } from '../src';
+import { createRoutings, testClient } from './lib';
+import { compress } from '../src';
 
-const router = new Routings();
-
+const router = createRoutings();
 router.get('/compress', async (c) => {
   c.set('result', { data: 'x'.repeat(2048) });
 });
 
-const theAPI = new TheAPI({ routings: [router] });
+const { theAPI } = await testClient({
+  routings: [router],
+});
 theAPI.app.use('*', compress({ threshold: 1 }));
 
 describe('compress', () => {

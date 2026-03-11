@@ -1,14 +1,16 @@
 import { describe, expect, test } from 'bun:test';
-import { Routings, TheAPI, bodyLimit } from '../src';
+import { createRoutings, testClient } from './lib';
+import { bodyLimit } from '../src';
 
-const router = new Routings();
-
+const router = createRoutings();
 router.post('/body-limit', async (c) => {
   await c.req.text();
   c.set('result', { ok: true });
 });
 
-const theAPI = new TheAPI({ routings: [router] });
+const { theAPI } = await testClient({
+  routings: [router],
+});
 theAPI.app.use('*', bodyLimit({ maxSize: 5 }));
 
 describe('bodyLimit', () => {

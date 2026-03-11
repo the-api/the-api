@@ -7,8 +7,8 @@ mock.module('nodemailer', () => ({
   createTransport: () => ({ sendMail: (data: unknown) => { c?.storeValue('email', data); } }),
 }));
 
-const { getTestClient } = await import('./lib');
-c = await getTestClient();
+const { testClient } = await import('./lib');
+({ client: c } = await testClient());
 
 beforeAll(async () => {
   await c.deleteTables();

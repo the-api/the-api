@@ -1,11 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { Routings } from 'the-api-routings';
-import { getTestClient } from './lib';
-import { TheAPI, middlewares } from '../src';
+import { createRoutings, testClient } from './lib';
+import { middlewares } from '../src';
 import type { AppContext } from '../src';
 
-const router = new Routings();
-
+const router = createRoutings();
 router.get('/email_text', async (c: AppContext) => {
   await c.var.email({ to: 'test@test', subject: 'hi', text: 'hi2' });
 });
@@ -35,11 +33,10 @@ const emailTemplates = {
   testData: { subject: '{{name.firstName}}!', text: 'Hello, {{name.firstName}}' },
 };
 
-const theAPI = new TheAPI({
-  emailTemplates,
+const { theAPI, client } = await testClient({
   routings: [middlewares.errors, middlewares.email, router],
+  theApiOptions: { emailTemplates },
 });
-const client = await getTestClient(theAPI);
 
 describe('email', () => {
   test('init', async () => {

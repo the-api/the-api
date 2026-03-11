@@ -1,41 +1,56 @@
-exports.up = (knex) => knex.schema
-  .createTable('testTypes', (table) => {
-    table.increments('id');
-    table.string('name').notNullable();
-  })
-  .createTable('testTypeAges', (table) => {
-    table.increments('id');
-    table.integer('typeId')
-      .references('id')
-      .inTable('testTypes')
-      .onUpdate('CASCADE')
-      .onDelete('CASCADE');
-    table.string('age').notNullable();
-  })
-  .createTable('testNews', (table) => {
-    table.increments('id');
-    table.timestamp('timeCreated').notNullable().defaultTo(knex.fn.now());
-    table.timestamp('timeUpdated').nullable();
-    table.timestamp('timePublished').nullable();
-    table.timestamp('timeDeleted').nullable();
-    table.boolean('isDeleted').defaultTo(false);
-    table.string('name').notNullable();
-    table.integer('typeId')
-      .references('id')
-      .inTable('testTypes')
-      .onUpdate('CASCADE')
-      .onDelete('SET NULL');
-    table.integer('views').defaultTo(0);
-    table.integer('userId');
-  })
-  .createTable('messages', (table) => {
-    table.increments('id').primary();
-    table.timestamp('timeCreated').notNullable().defaultTo(knex.fn.now());
-    table.integer('warningLevel').notNullable().checkBetween([0, 5]);
-    table.string('body').notNullable();
-    table.boolean('isDeleted').defaultTo(false);
-  });
+exports.up = async (knex) => {
+  if (!(await knex.schema.hasTable('testTypes'))) {
+    await knex.schema.createTable('testTypes', (table) => {
+      table.increments('id');
+      table.string('name').notNullable();
+    });
+  }
 
-exports.down = (knex) => knex.schema
-  .dropTable('messages')
-  .dropTable('testNews');
+  if (!(await knex.schema.hasTable('testTypeAges'))) {
+    await knex.schema.createTable('testTypeAges', (table) => {
+      table.increments('id');
+      table.integer('typeId')
+        .references('id')
+        .inTable('testTypes')
+        .onUpdate('CASCADE')
+        .onDelete('CASCADE');
+      table.string('age').notNullable();
+    });
+  }
+
+  if (!(await knex.schema.hasTable('testNews'))) {
+    await knex.schema.createTable('testNews', (table) => {
+      table.increments('id');
+      table.timestamp('timeCreated').notNullable().defaultTo(knex.fn.now());
+      table.timestamp('timeUpdated').nullable();
+      table.timestamp('timePublished').nullable();
+      table.timestamp('timeDeleted').nullable();
+      table.boolean('isDeleted').defaultTo(false);
+      table.string('name').notNullable();
+      table.integer('typeId')
+        .references('id')
+        .inTable('testTypes')
+        .onUpdate('CASCADE')
+        .onDelete('SET NULL');
+      table.integer('views').defaultTo(0);
+      table.integer('userId');
+    });
+  }
+
+  if (!(await knex.schema.hasTable('messages'))) {
+    await knex.schema.createTable('messages', (table) => {
+      table.increments('id').primary();
+      table.timestamp('timeCreated').notNullable().defaultTo(knex.fn.now());
+      table.integer('warningLevel').notNullable().checkBetween([0, 5]);
+      table.string('body').notNullable();
+      table.boolean('isDeleted').defaultTo(false);
+    });
+  }
+};
+
+exports.down = async (knex) => {
+  await knex.schema.dropTableIfExists('messages');
+  await knex.schema.dropTableIfExists('testNews');
+  await knex.schema.dropTableIfExists('testTypeAges');
+  await knex.schema.dropTableIfExists('testTypes');
+};

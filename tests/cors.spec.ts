@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { Routings, TheAPI, cors } from '../src';
+import { createRoutings, testClient } from './lib';
+import { cors } from '../src';
 
-const router = new Routings();
-
+const router = createRoutings();
 router.get('/cors', async (c) => {
   c.set('result', { ok: true });
 });
@@ -11,7 +11,9 @@ router.post('/cors', async (c) => {
   c.set('result', await c.req.json());
 });
 
-const theAPI = new TheAPI({ routings: [router] });
+const { theAPI } = await testClient({
+  routings: [router],
+});
 theAPI.app.use('*', cors());
 
 describe('cors', () => {

@@ -1,14 +1,16 @@
 import { describe, expect, test } from 'bun:test';
-import { Routings, TheAPI, etag } from '../src';
+import { createRoutings, testClient } from './lib';
+import { etag } from '../src';
 
-const router = new Routings();
-
+const router = createRoutings();
 router.get('/etag', async (c) => {
   c.header('ETag', '"etag-v1"');
   c.set('result', { ok: true, version: 1 });
 });
 
-const theAPI = new TheAPI({ routings: [router] });
+const { theAPI } = await testClient({
+  routings: [router],
+});
 theAPI.app.use('*', etag());
 
 describe('etag', () => {
