@@ -852,6 +852,9 @@ c.set('meta', ...)
 
 ### Using Routings
 
+`Routings` in `the-api` is a re-export from `the-api-routings`.
+So all CRUD behavior (`router.crud(...)`) is implemented in `the-api-routings`.
+
 ```typescript
 import { Routings, TheAPI } from 'the-api';
 
