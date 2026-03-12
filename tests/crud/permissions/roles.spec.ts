@@ -1,7 +1,8 @@
 import { expect, test, describe } from 'bun:test';
+import Roles from 'the-api-roles';
 import { testClient } from '../../lib';
 
-const roles = {
+const roles = new Roles({
   root: ['*'], // all permissions
   admin: [
     '_.registered',       // nested permissions: all permissions of registered role
@@ -11,7 +12,7 @@ const roles = {
   ],
   registered: ['testNews.get', 'users.get'], // only get permissions for testNews and users
   owner: ['users.getFullInfo', 'users.editEmail'], // virtual role, resolved per record
-};
+});
 
 const { theAPI, client } = await testClient({
   routingOptions: { migrationDirs: ['./tests/migrations'] },

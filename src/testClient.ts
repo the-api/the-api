@@ -3,15 +3,14 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { DateTime } from 'luxon';
 import { testClient as honoTestClient } from 'hono/testing';
-import { roles as defaultRoles } from 'the-api-roles';
+import Roles from 'the-api-roles';
+import { Routings } from 'the-api-routings';
 import { Db } from './Db';
 import { TheAPI } from './TheApi';
 import type { Knex } from 'knex';
 import type { IncomingHttpHeaders } from 'http';
 import type { Hono } from 'hono';
-import { Routings } from 'the-api-routings';
 import type { CrudBuilderOptionsType, Routings as RoutingsType } from 'the-api-routings';
-import type { Roles } from 'the-api-roles';
 import type { MethodType, TheApiOptionsType } from './types';
 
 type BodyType = string | number | boolean | HttpPostBodyType;
@@ -27,6 +26,7 @@ export type TestClientInitType = {
 
 export type TestClientUserType = {
   id: number;
+  userId?: number;
   roles?: string[];
   token?: string;
 };
@@ -58,13 +58,12 @@ export class TestClient {
   db: Knex;
   tokens: TestClientTokensType = {};
   users: TestClientUsersType = {
-    root: { id: 1, roles: ['root'] },
-    admin: { id: 2, roles: ['admin'] },
-    registered: { id: 3, roles: ['registered'] },
-    manager: { id: 4, roles: ['manager'] },
-    unknown: { id: 5, roles: ['unknown'] },
-    noRole: { id: 6 },
-    noToken: { id: 0 },
+    root: { id: 1, userId: 1, roles: ['root'] },
+    admin: { id: 2, userId: 2, roles: ['admin'] },
+    registered: { id: 3, userId: 3, roles: ['registered'] },
+    manager: { id: 4, userId: 4, roles: ['manager'] },
+    unknown: { id: 5, userId: 5, roles: ['unknown'] },
+    noRole: { id: 6, userId: 6 },
   };
 
   constructor(options?: TestClientInitType) {
@@ -72,14 +71,11 @@ export class TestClient {
     if (app) this.app = app;
     if (headers) this.headers = headers;
     this.db = db;
+    this.tokens.noToken = '';
 
     for (const role of Object.keys(this.users)) {
       const user = this.users[role];
       if (!user) continue;
-      if (role === 'noToken') {
-        this.tokens[role] = '';
-        continue;
-      }
       user.token = this.generateGWT(user);
       this.tokens[role] = user.token;
     }
@@ -281,8 +277,7 @@ export async function testClient(
     if (isRolesInstance(roles)) {
       rolesInstance = roles;
     } else {
-      defaultRoles.init(roles);
-      rolesInstance = defaultRoles;
+      rolesInstance = new Roles(roles);
     }
   }
 

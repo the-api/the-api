@@ -9,7 +9,7 @@ import { beginRoute, endRoute } from './middlewares/default';
 import { relationsRoute } from './middlewares/relations';
 import type { Next, MiddlewareHandler } from 'hono';
 import type { Server } from 'bun';
-import type { Roles } from 'the-api-roles';
+import type Roles from 'the-api-roles';
 import type { Routings as RoutingsType } from 'the-api-routings';
 import type {
   AppEnv,
@@ -56,7 +56,10 @@ export class TheAPI {
       options || {};
 
     this.app = new Hono<AppEnv>({ router: new RegExpRouter() });
-    this.roles = roles;
+    if (roles) {
+      roles.init();
+      this.roles = roles;
+    }
     if (emailTemplates) this.emailTemplates = emailTemplates;
     this.routings = routings || [];
     this.port = port || +PORT;
@@ -298,7 +301,7 @@ export class TheAPI {
   private registerRoutes(): void {
     const rolesRoute = new Routings();
     if (this.roles) {
-      rolesRoute.use('*', this.roles.rolesMiddleware);
+      rolesRoute.use('*', this.roles.rolesMiddleware.bind(this.roles));
       this.roles.routePermissions = {};
     }
 

@@ -3,7 +3,7 @@ import type { SocketAddress } from 'bun';
 import type { Knex } from 'knex';
 import type { H } from 'hono/types';
 import type { Routings } from 'the-api-routings';
-import type { Roles } from 'the-api-roles';
+import type Roles from 'the-api-roles';
 import type { Files } from './Files';
 
 export type { MiddlewareHandler, Handler };

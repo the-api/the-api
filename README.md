@@ -13,7 +13,7 @@
       - [Query parameters for GET all](#query-parameters-for-get-all)
     - [Validation example](#validation-example)
     - [Field rules example](#field-rules-example)
-    - [Permissions example](#permissions-example)
+    - [Roles \& Permissions example](#roles--permissions-example)
     - [Error example](#error-example)
   - [.env](#env)
   - [Response structure](#response-structure)
@@ -326,10 +326,10 @@ https://github.com/the-api/the-api-validators-zod
 `fieldRules` is the only supported structure for field-level access configuration.
 
 ```js
-import { roles } from 'the-api-roles';
+import Roles from 'the-api-roles';
 import { Routings, TheAPI } from 'the-api';
 
-roles.init({
+const roles = new Roles({
   root: ['*'],
   admin: ['users.getFullInfo', 'users.editEmail'],
   registered: ['users.getViews'],
@@ -368,13 +368,15 @@ Notes:
 - field-level behavior is configured only via `fieldRules`.
 - If `readOnly` is not provided, default readonly fields are used: `id`, `timeCreated`, `timeUpdated`, `timeDeleted`, `isDeleted`.
 
-### Permissions example
+### Roles & Permissions example
+
+[`the-api-roles`](https://github.com/the-api/the-api-roles) is a role and permission management library for `the-api`. It is used to describe available roles, resolve inherited permissions, and check access in routes and CRUD handlers.
 
 ```js
-import { roles } from 'the-api-roles';
+import Roles from 'the-api-roles';
 import { Routings, TheAPI } from 'the-api';
 
-roles.init({
+const roles = new Roles({
   root: ['*'], // all permissions
   admin: [
     '_.registered',       // nested permissions: all permissions of registered role
@@ -383,10 +385,18 @@ roles.init({
     'testNews.*'          // all permissions for testNews
   ],
   registered: ['testNews.get', 'users.get'], // only get permissions for testNews and users
+  unverified: ['_.guest', 'users.getPublicInfo'], // limited permissions for unverified users
+  guest: ['users.login'], // permissions for guests (unauthenticated users)
   owner: ['users.getFullInfo', 'users.editEmail'], // virtual role, resolved per record
 });
 
 const router = new Routings({ migrationDirs: ['./tests/migrations'] });
+
+router.get('/users', async (c, next) => {
+  await roles.checkPermission('users.get');
+
+  await next();
+});
 
 router.crud({
   table: 'testNews',
@@ -410,6 +420,7 @@ How `permissions` works:
 - If `permissions.methods` is not provided, methods are inferred automatically from role permissions:
   - the system scans all role values and finds `<prefix|table>.<method>` and `<prefix|table>.*`
   - example: role permission `users.delete` -> inferred `methods: ['DELETE']`
+  - list of supported methods for inference: `get`, `post`, `patch`, `delete` (case-insensitive)
   - if no matching permissions exist, method-level protection is not added
 - If `permissions.methods` is provided, it overrides auto-inference.
 - `permissions.owner`: owner-specific permissions for field visibility rules.
@@ -934,7 +945,7 @@ Parameters of `testClient(options?)`:
 - `migrationDirs?: string[]` - migration folders used by internal routings created inside `testClient`
 - `routingOptions?: { migrationDirs?: string[] }` - explicit routing options for internal routings (`crudParams` and `newRoutings`)
 - `crudParams?: CrudBuilderOptionsType[]` - list of `router.crud(...)` configs that will be registered automatically
-- `roles?: Roles | Record<string, string[]>` - roles instance or roles map (map is auto-initialized internally)
+- `roles?: Roles | Record<string, string[]>` - roles instance or roles map (map is converted to `new Roles(...)` internally)
 - `routings?: Routings[]` - extra routings/middlewares you already created
 - `newRoutings?: (router: Routings) => void` - callback to append custom routes to a new internal `Routings` instance
 - `theApiOptions?: Omit<TheApiOptionsType, 'routings' | 'roles' | 'migrationDirs'>` - additional `TheAPI` options (for example `port`, `emailTemplates`)
@@ -947,8 +958,8 @@ What `testClient` returns:
 
 - `theAPI` - initialized `TheAPI` instance (call `await theAPI.init()` in tests)
 - `client` - request helper with methods: `get`, `post`, `patch`, `delete`, `postForm`, `postFormRequest`, `deleteTables`, `truncateTables`, `readFile`, `generateGWT`, `storeValue`, `getValue`
-- `tokens` - ready-to-use JWT tokens for default test users (`root`, `admin`, `registered`, `manager`, `unknown`, `noRole`, `noToken`)
-- `users` - default test users payload
+- `tokens` - ready-to-use JWT tokens for default test users (`root`, `admin`, `registered`, `manager`, `unknown`, `noRole`) and `noToken` as an empty string
+- `users` - default test users payload (`root`, `admin`, `registered`, `manager`, `unknown`, `noRole`)
 - `DateTime` - `luxon` `DateTime` export for convenience in tests
 
 Minimal example:

@@ -36,6 +36,9 @@ const beginMiddleware = async (c: AppContext, next: Next) => {
       // return immediately - don't process the request
       return formatResponse(c, dateBegin);
     }
+  } else {
+    // Requests without token are treated as guest users for roles middleware.
+    c.set('user', { roles: ['guest'] });
   }
 
   // -- downstream --
