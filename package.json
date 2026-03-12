@@ -7,7 +7,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "test": "bun test --preload ./tests/init.ts --max-concurrency=1",
+    "test": "bun test --preload ./tests/init.ts",
     "build": "bun build ./src/index.ts --outdir ./dist --target node --minify --external luxon --external knex --external pg --external jsonwebtoken --external hono --external flattening --external @types/node --external @types/bun --external the-api-roles && tsc"
   },
   "dependencies": {
@@ -22,7 +22,7 @@
     "nodemailer": "^8.0.1",
     "pg": "^8.19.0",
     "the-api-roles": "^1.1.1",
-    "the-api-routings": "^0.6.3"
+    "the-api-routings": "^0.6.4"
   },
   "devDependencies": {
     "@types/bun": "^1.3.9",

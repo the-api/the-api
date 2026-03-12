@@ -16,7 +16,7 @@
         "nodemailer": "^8.0.1",
         "pg": "^8.19.0",
         "the-api-roles": "^1.1.1",
-        "the-api-routings": "^0.6.3",
+        "the-api-routings": "^0.6.4",
       },
       "devDependencies": {
         "@types/bun": "^1.3.9",
@@ -199,7 +199,7 @@
 
     "the-api-roles": ["the-api-roles@1.1.1", "", {}, "sha512-+75do9iA4usk3u18eHE7nmgBYnYedgNiFAoeCzYiga3pq+RoPPkQ1E5uSdnYo4tQVq4X5Np4W2TpBk1QpN+Q1w=="],
 
-    "the-api-routings": ["the-api-routings@0.6.3", "", { "dependencies": { "flattening": "^2.4.3", "hono": "^4.12.2" } }, "sha512-Y3aJaMggt2fY7UKwmC1uLl+ed37iZ6M3eW+2WNrirV5QkADnG4sIDVZMjTAKUe26Z64qqgdGicDz/BVzlPCaeQ=="],
+    "the-api-routings": ["the-api-routings@0.6.4", "", { "dependencies": { "flattening": "^2.4.3", "hono": "^4.12.2" } }, "sha512-7JH2NF/d/+2nD29DVk3WRji132tNavKumjRaf23bFnyKrM6qJihNQY33wdtBzEPyT3FCn7gszbOy1xKkLwT+uA=="],
 
     "through2": ["through2@4.0.2", "", { "dependencies": { "readable-stream": "3" } }, "sha512-iOqSav00cVxEEICeD7TjLB1sueEL+81Wpzp2bY17uZjZN0pWZPuo4suZ/61VujxmqSGFfgOcNuTZ85QJwNZQpw=="],
 
