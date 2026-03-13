@@ -2,11 +2,28 @@ import jwt from 'jsonwebtoken';
 import { Routings } from 'the-api-routings';
 import { randomUUID } from 'crypto';
 import type { Next } from 'hono';
-import type { AppContext, RoutesErrorType } from '../types';
+import type { AppContext, QueryParamValue, RoutesErrorType } from '../types';
 import { getErrorNameAndAdditional } from '../errorHelpers';
 
 const { JWT_SECRET } = process.env;
 const secret = JWT_SECRET || randomUUID();
+
+const setSearchParamValue = (
+  searchParams: URLSearchParams,
+  key: string,
+  value: QueryParamValue,
+): void => {
+  searchParams.delete(key);
+
+  if (value == null) return;
+
+  if (Array.isArray(value)) {
+    for (const item of value) searchParams.append(key, String(item));
+    return;
+  }
+
+  searchParams.set(key, String(value));
+};
 
 const beginMiddleware = async (c: AppContext, next: Next) => {
   const dateBegin = new Date();
@@ -21,6 +38,15 @@ const beginMiddleware = async (c: AppContext, next: Next) => {
 
     c.set('result', { error: true, ...errObj, name, additional });
     if (errObj?.status) c.status(errObj.status as any);
+  });
+  c.set('setQueryParams', (params: Record<string, QueryParamValue>) => {
+    const url = new URL(c.req.url);
+
+    for (const [key, value] of Object.entries(params)) {
+      setSearchParamValue(url.searchParams, key, value);
+    }
+
+    c.req.raw = new Request(url.toString(), c.req.raw);
   });
 
   // -- JWT --

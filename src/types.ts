@@ -134,12 +134,21 @@ export type AppBindings = {
   ip: SocketAddress | null;
 };
 
+export type QueryParamValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | Array<string | number | boolean>;
+
 export type AppVariables = {
   // -- core (set by default middleware) --
   log: (...args: unknown[]) => void;
   error: (err: Error | { message: string }) => void;
   getErrorByMessage: (message: string) => RoutesErrorType | undefined;
   getTemplateByName: (name: string) => EmailTemplatesType;
+  setQueryParams: (params: Record<string, QueryParamValue>) => void;
 
   // -- request state --
   result: unknown;

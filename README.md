@@ -11,6 +11,8 @@
         - [Get one](#get-one)
         - [Delete](#delete)
       - [Query parameters for GET all](#query-parameters-for-get-all)
+      - [Overriding methods](#overriding-methods)
+      - [Query params helper](#query-params-helper)
     - [Validation example](#validation-example)
     - [Field rules example](#field-rules-example)
     - [Roles \& Permissions example](#roles--permissions-example)
@@ -260,6 +262,47 @@ await theAPI.up();
 | `_in_<field>` | `IN` from JSON array for non-boolean columns | `?_in_id=[1,2,3]` |
 | `_not_in_<field>` | `NOT IN` from JSON array for non-boolean columns | `?_not_in_id=[4,5]` |
 
+#### Overriding methods
+
+You can override any CRUD method with custom logic. Just add a new route or a route with the same path and method before `router.crud(...)`:
+
+```typescript
+import { Routings } from 'the-api';
+
+const router = new Routings({ migrationDirs: ['./migrations'] });
+
+router.crud({ table: 'messages' });
+
+const routerOverride = new Routings();
+
+routerOverride.get('/messages', async (c, next) => {
+  c.var.setQueryParams({ userId: c.var.user.userId });
+  await next();
+});
+
+export default [routerOverride, router];
+```
+
+#### Query params helper
+
+If you only need to update request query params before the next handler, use `c.var.setQueryParams(...)`:
+
+```typescript
+import { Routings } from 'the-api';
+
+const router = new Routings();
+
+router.get('/messages', async (c, next) => {
+  c.var.setQueryParams({
+    userId: c.var.user.userId,
+    modified: true,
+  });
+
+  await next();
+});
+```
+
+`setQueryParams` recreates `c.req.raw` with updated search params, so the next handler can read them with `c.req.query()` / `c.req.queries()`. Existing values are overwritten, arrays are written as repeated query params, and `null` / `undefined` remove the param.
 
 ### Validation example
 
