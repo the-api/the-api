@@ -171,8 +171,11 @@ export type AppContext = Context<AppEnv>;
 // Config
 // ------------------------------------------
 
+export type RoutingsInputItemType = Routings | Routings[];
+export type RoutingsInputType = RoutingsInputItemType[];
+
 export type TheApiOptionsType = {
-  routings: Routings[];
+  routings: RoutingsInputType;
   roles?: Roles;
   emailTemplates?: Record<string, EmailTemplatesType>;
   port?: number;

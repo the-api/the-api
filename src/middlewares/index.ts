@@ -1,6 +1,11 @@
-export { logs } from './logs';
+import { logs } from './logs';
+import { errors } from './errors';
+import { status } from './status';
+
+const common = [logs, errors, status];
+
+export { common, logs, errors, status };
 export { info } from './info';
-export { status } from './status';
-export { errors } from './errors';
 export { email } from './email';
 export { files } from './files';
+

@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { testClient } from './lib';
-import { info, logs, status } from '../src/middlewares';
+import { common, info } from '../src/middlewares';
 
-const { theAPI, client } = await testClient({ routings: [logs, status, info] });
+const { theAPI, client } = await testClient({ routings: [common, info] });
 
-describe('info', () => {
+describe('middlewares.common', () => {
   test('init', async () => {
     await theAPI.init();
   });
@@ -22,6 +22,6 @@ describe('info', () => {
   });
 
   test('finalize', async () => {
-    await client.deleteTables()
+    await client.deleteTables();
   });
 });

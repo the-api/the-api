@@ -15,6 +15,7 @@ import type {
   AppEnv,
   AppContext,
   TheApiOptionsType,
+  RoutingsInputType,
   EmailTemplatesType,
   RoutesErrorsType,
   RoutesErrorType,
@@ -44,7 +45,7 @@ export class TheAPI {
   db: Db | null = null;
   roles?: Roles;
   private errors: RoutesErrorsType = {};
-  private routings: RoutingsType[];
+  private routings: RoutingsInputType = [];
   private port: number;
   private migrationDirs: string[] = [
     resolve(`${import.meta.dir}/../src/migrations`),
@@ -71,7 +72,7 @@ export class TheAPI {
     this.registerGlobalMiddleware();
 
     if (dbHost || dbHostWrite) {
-      for (const { migrationDirs } of this.routings) {
+      for (const { migrationDirs } of this.getFlatRoutings()) {
         if (Array.isArray(migrationDirs)) {
           this.migrationDirs = this.migrationDirs.concat(migrationDirs);
         }
@@ -103,17 +104,18 @@ export class TheAPI {
     };
   }
 
-  addRoutings(routings: RoutingsType | RoutingsType[]): void {
+  addRoutings(routings: RoutingsType | RoutingsInputType): void {
     this.routings = this.routings.concat(routings);
   }
 
   // -- private --
 
   private collectErrorsAndTemplates(): void {
+    const flatRoutings = this.getFlatRoutings();
     const all = [
       beginRoute,
       relationsRoute,
-      ...this.routings,
+      ...flatRoutings,
       endRoute,
     ];
 
@@ -124,6 +126,10 @@ export class TheAPI {
         ...routesEmailTemplates,
       };
     }
+  }
+
+  private getFlatRoutings(): RoutingsType[] {
+    return this.routings.flat() as RoutingsType[];
   }
 
   private registerGlobalMiddleware(): void {
@@ -311,7 +317,7 @@ export class TheAPI {
       beginRoute,
       rolesRoute,
       relationsRoute,
-      ...this.routings,
+      ...this.getFlatRoutings(),
       endRoute,
     ];
 

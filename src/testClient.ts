@@ -11,7 +11,7 @@ import type { Knex } from 'knex';
 import type { IncomingHttpHeaders } from 'http';
 import type { Hono } from 'hono';
 import type { CrudBuilderOptionsType, Routings as RoutingsType } from 'the-api-routings';
-import type { MethodType, TheApiOptionsType } from './types';
+import type { MethodType, RoutingsInputType, TheApiOptionsType } from './types';
 
 type BodyType = string | number | boolean | HttpPostBodyType;
 
@@ -42,7 +42,7 @@ export type TestClientOptionsType = {
   };
   crudParams?: CrudBuilderOptionsType[];
   roles?: Roles | TestClientRolesConfigType;
-  routings?: RoutingsType[];
+  routings?: RoutingsInputType;
   newRoutings?: (router: Routings) => void;
   theApiOptions?: Omit<TheApiOptionsType, 'routings' | 'roles' | 'migrationDirs'>;
 };
@@ -253,6 +253,7 @@ export async function testClient(
   } = options || {};
 
   const allRoutings = [...routings];
+  const flatRoutings = allRoutings.flat() as RoutingsType[];
 
   if (crudParams.length || migrationDirs?.length || routingOptions?.migrationDirs?.length) {
     const crudRouting = new Routings({
@@ -284,7 +285,7 @@ export async function testClient(
   const theAPI = new TheAPI({
     ...theApiOptions,
     routings: allRoutings,
-    migrationDirs: allRoutings.some(
+    migrationDirs: flatRoutings.some(
       (routing) => Array.isArray((routing as { migrationDirs?: unknown }).migrationDirs),
     ) ? undefined : migrationDirs,
     roles: rolesInstance,

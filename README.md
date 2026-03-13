@@ -19,6 +19,7 @@
   - [Response structure](#response-structure)
     - [Fields Description](#fields-description)
   - [Middlewares](#middlewares)
+    - [common](#common)
     - [logs](#logs)
     - [cors](#cors)
     - [csrf](#csrf)
@@ -43,7 +44,7 @@
 ## Examples
 
 ```typescript
-import { Routings, TheAPI } from 'the-api';
+import { Routings, TheAPI, middlewares } from 'the-api';
 
 const router = new Routings();
 
@@ -52,7 +53,7 @@ router.get('/data/:id', async (c) => { // hono routing
   c.set('result', { id, foo: 'bar' }); // set response result
 });
 
-const theAPI = new TheAPI({ routings: [router] });
+const theAPI = new TheAPI({ routings: [middlewares.common, router] });
 
 await theAPI.up(); // use with node
 // ...or use with bun
@@ -481,6 +482,26 @@ example:
 
 ## Middlewares
 
+### common
+
+`middlewares.common` is a ready-made group of base middlewares:
+
+- `middlewares.logs`
+- `middlewares.errors`
+- `middlewares.status`
+
+It is useful when you usually want logging, error handling, and `GET /status` together.
+
+```typescript
+import { Routings, TheAPI, middlewares } from 'the-api';
+
+const router = new Routings();
+
+const theAPI = new TheAPI({
+  routings: [middlewares.common, router],
+});
+```
+
 ### logs
 
 `logs` middleware logs all requests and responses with unique request id, method, path, time on server, log information
@@ -877,6 +898,19 @@ const theAPI = new TheAPI({ routings: [router] });
 export default theAPI.up();
 ```
 
+`routings` supports nested arrays too, so you can group reusable middleware sets:
+
+```typescript
+import { Routings, TheAPI, middlewares } from 'the-api';
+
+const route1 = new Routings();
+const route2 = new Routings();
+
+const theAPI = new TheAPI({
+  routings: [route1, [middlewares.common, route2]],
+});
+```
+
 ### Get route
 
 ```typescript
@@ -946,7 +980,7 @@ Parameters of `testClient(options?)`:
 - `routingOptions?: { migrationDirs?: string[] }` - explicit routing options for internal routings (`crudParams` and `newRoutings`)
 - `crudParams?: CrudBuilderOptionsType[]` - list of `router.crud(...)` configs that will be registered automatically
 - `roles?: Roles | Record<string, string[]>` - roles instance or roles map (map is converted to `new Roles(...)` internally)
-- `routings?: Routings[]` - extra routings/middlewares you already created
+- `routings?: RoutingsInputType` - extra routings/middlewares you already created; nested arrays are supported
 - `newRoutings?: (router: Routings) => void` - callback to append custom routes to a new internal `Routings` instance
 - `theApiOptions?: Omit<TheApiOptionsType, 'routings' | 'roles' | 'migrationDirs'>` - additional `TheAPI` options (for example `port`, `emailTemplates`)
 
