@@ -291,6 +291,11 @@ export async function testClient(
     roles: rolesInstance,
   });
 
+  const bunTest = await import('bun:test').catch(() => null);
+  bunTest?.afterAll?.(async () => {
+    await theAPI.destroy();
+  });
+
   const client = await getTestClient({ app: theAPI.app });
   const { tokens, users } = client;
   return { client, theAPI, DateTime, tokens, users };

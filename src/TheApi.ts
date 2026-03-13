@@ -104,6 +104,13 @@ export class TheAPI {
     };
   }
 
+  async destroy(): Promise<void> {
+    if (this.db) {
+      await this.db.destroy();
+      this.db = null;
+    }
+  }
+
   addRoutings(routings: RoutingsType | RoutingsInputType): void {
     this.routings = this.routings.concat(routings);
   }
