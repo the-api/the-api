@@ -1,11 +1,12 @@
 import { DateTime } from 'luxon';
+import Roles from 'the-api-roles';
+import { Routings } from 'the-api-routings';
 import { TheAPI } from './TheApi';
 import type { Knex } from 'knex';
 import type { IncomingHttpHeaders } from 'http';
 import type { Hono } from 'hono';
-import type { CrudBuilderOptionsType, Routings as RoutingsType } from 'the-api-routings';
-import type { Roles } from 'the-api-roles';
-import type { MethodType, TheApiOptionsType } from './types';
+import type { CrudBuilderOptionsType } from 'the-api-routings';
+import type { MethodType, RoutingsInputType, TheApiOptionsType } from './types';
 type BodyType = string | number | boolean | HttpPostBodyType;
 export type HttpPostBodyType = {
     [key: string]: BodyType | BodyType[];
@@ -16,6 +17,7 @@ export type TestClientInitType = {
 };
 export type TestClientUserType = {
     id: number;
+    userId?: number;
     roles?: string[];
     token?: string;
 };
@@ -24,11 +26,18 @@ export type TestClientTokensType = Record<string, string>;
 export type TestClientRolesConfigType = Record<string, string[]>;
 export type TestClientOptionsType = {
     migrationDirs?: string[];
+    routingOptions?: {
+        migrationDirs?: string[];
+    };
     crudParams?: CrudBuilderOptionsType[];
     roles?: Roles | TestClientRolesConfigType;
-    routings?: RoutingsType[];
+    routings?: RoutingsInputType;
+    newRoutings?: (router: Routings) => void;
     theApiOptions?: Omit<TheApiOptionsType, 'routings' | 'roles' | 'migrationDirs'>;
 };
+export declare function createRoutings(options?: {
+    migrationDirs?: string[];
+}): Routings;
 export declare class TestClient {
     private app;
     private headers?;
@@ -46,6 +55,7 @@ export declare class TestClient {
     post(pathName: string, json: HttpPostBodyType, token?: string): Promise<any>;
     postForm(pathName: string, form: HttpPostBodyType, token?: string): Promise<any>;
     postFormRequest(pathName: string, obj: Record<string, unknown>, token?: string): Promise<Response>;
+    private appendFormValue;
     patch(pathName: string, json: HttpPostBodyType, token?: string): Promise<any>;
     delete(pathName: string, token?: string): Promise<any>;
     generateGWT(params: Record<string, unknown>, expiresIn?: string): string;

@@ -166,9 +166,9 @@ export class TestClient {
 
     for (const [key, val] of Object.entries(obj)) {
       if (Array.isArray(val)) {
-        val.map((v) => body.append(`${key}[]`, v as Blob));
+        val.forEach((item) => this.appendFormValue(body, key, item));
       } else {
-        body.append(key, val as Blob);
+        this.appendFormValue(body, key, val);
       }
     }
 
@@ -183,6 +183,23 @@ export class TestClient {
     });
 
     return this.app?.fetch(req);
+  }
+
+  private appendFormValue(
+    body: FormData,
+    key: string,
+    value: unknown,
+  ): void {
+    if (value === undefined) {
+      return;
+    }
+
+    if (value instanceof Blob) {
+      body.append(key, value);
+      return;
+    }
+
+    body.append(key, String(value));
   }
 
   async patch(pathName: string, json: HttpPostBodyType, token?: string) {

@@ -3,7 +3,7 @@ import type { SocketAddress } from 'bun';
 import type { Knex } from 'knex';
 import type { H } from 'hono/types';
 import type { Routings } from 'the-api-routings';
-import type { Roles } from 'the-api-roles';
+import type Roles from 'the-api-roles';
 import type { Files } from './Files';
 export type { MiddlewareHandler, Handler };
 export type MethodType = 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'OPTIONS';
@@ -55,9 +55,23 @@ export type UploadResultType = {
     name: string;
     size: number;
     bucket?: string;
+    originalName?: string;
+    sizes?: Record<string, UploadImageSizeResultType>;
+};
+export type UploadImageSizeResultType = {
+    path: string;
+    width: number;
+    height: number;
+    size: number;
+};
+export type FilesImageSizeType = {
+    name: string;
+    width: number;
+    height: number;
 };
 export type FilesOptions = {
     folder?: string;
+    imageSizes?: string | FilesImageSizeType[];
     minio?: {
         bucketName?: string;
         endPoint?: string;
@@ -67,6 +81,14 @@ export type FilesOptions = {
         secretKey?: string;
     };
 };
+export type GetBodyFilesOptionsType = {
+    fields?: string[];
+    imagesOnly?: boolean;
+};
+export type UploadManyOptionsType = {
+    imagesOnly?: boolean;
+};
+export type UploadBodyOptionsType = GetBodyFilesOptionsType;
 export type DbColumnInfo = {
     column_name: string;
     data_type: string;
@@ -98,6 +120,7 @@ export type DbOptionsType = {
 export type AppBindings = {
     ip: SocketAddress | null;
 };
+export type QueryParamValue = string | number | boolean | null | undefined | Array<string | number | boolean>;
 export type AppVariables = {
     log: (...args: unknown[]) => void;
     error: (err: Error | {
@@ -105,6 +128,7 @@ export type AppVariables = {
     }) => void;
     getErrorByMessage: (message: string) => RoutesErrorType | undefined;
     getTemplateByName: (name: string) => EmailTemplatesType;
+    setQueryParams: (params: Record<string, QueryParamValue>) => void;
     result: unknown;
     meta: Record<string, unknown>;
     relations: Record<string, unknown>;
@@ -123,8 +147,10 @@ export type AppEnv = {
     Variables: AppVariables;
 };
 export type AppContext = Context<AppEnv>;
+export type RoutingsInputItemType = Routings | Routings[];
+export type RoutingsInputType = RoutingsInputItemType[];
 export type TheApiOptionsType = {
-    routings: Routings[];
+    routings: RoutingsInputType;
     roles?: Roles;
     emailTemplates?: Record<string, EmailTemplatesType>;
     port?: number;

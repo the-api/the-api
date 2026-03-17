@@ -1007,6 +1007,132 @@ router.delete('/patch/:id', async (c: Context) => {
   c.set('result', body);
 });
 
+## Files
+
+`middlewares.files` injects `c.var.files` with an instance of `Files`.
+If you need to override storage options in code, use `middlewares.createFiles(...)`.
+
+Local storage uses `FILES_FOLDER`. MinIO storage uses the existing `MINIO_*` variables.
+
+Basic upload keeps the original file name:
+
+```typescript
+import { Routings, TheAPI, middlewares } from 'the-api';
+
+const router = new Routings();
+
+router.post('/upload', async (c) => {
+  const body = await c.req.parseBody();
+  const result = await c.var.files.upload(body.file as File, 'uploads');
+  c.set('result', result);
+});
+
+const theAPI = new TheAPI({
+  routings: [middlewares.files, router],
+});
+
+await theAPI.up();
+```
+
+Or with an explicit folder:
+
+```typescript
+const theAPI = new TheAPI({
+  routings: [
+    middlewares.createFiles({ folder: 'public' }),
+    router,
+  ],
+});
+```
+
+If `IMAGE_SIZES` is set and the uploaded file is an image, `Files.upload(...)` creates resized `webp` variants automatically.
+
+Environment variable format:
+
+```env
+IMAGE_SIZES=small:200x150,medium:600x400,large:1200x900
+```
+
+For images, `upload(file, 'uploads')` generates a random 12-character hex name such as `abcdef123456` and stores files in nested folders using the first four characters:
+
+```text
+/path_to_save/ab/cd/abcdef123456/small.webp
+/path_to_save/ab/cd/abcdef123456/medium.webp
+/path_to_save/ab/cd/abcdef123456/large.webp
+```
+
+`small`, `medium`, `large` are taken from `IMAGE_SIZES`. Non-image files are still stored without resizing.
+
+Helpful workflow methods on `c.var.files`:
+
+- `getBodyFiles(body, { fields, imagesOnly })`
+- `uploadMany(files, destDir, { imagesOnly })`
+- `uploadBody(body, destDir, { fields, imagesOnly })`
+- `getImageSizes()`
+- `getImageDir(destDir, imageName)`
+- `getImageVariantPath(destDir, imageName, sizeName)`
+- `deleteImage(imageName, destDir)`
+
+Example for image-only upload from multipart body:
+
+```typescript
+router.post('/upload-images', async (c) => {
+  const body = await c.req.parseBody({ all: true });
+  const files = c.var.files.getBodyFiles(body, {
+    fields: ['file', 'file[]'],
+    imagesOnly: true,
+  });
+  const result = await c.var.files.uploadMany(files, 'images');
+  c.set('result', result);
+});
+```
+
+Or shorter:
+
+```typescript
+router.post('/upload-images', async (c) => {
+  const body = await c.req.parseBody({ all: true });
+  const result = await c.var.files.uploadBody(body, 'images', {
+    fields: ['file', 'file[]'],
+    imagesOnly: true,
+  });
+  c.set('result', result);
+});
+```
+
+Example result for an image upload:
+
+```json
+{
+  "path": "/path_to_save/ab/cd/abcdef123456",
+  "name": "abcdef123456",
+  "originalName": "photo.png",
+  "size": 153245,
+  "sizes": {
+    "small": {
+      "path": "/path_to_save/ab/cd/abcdef123456/small.webp",
+      "width": 200,
+      "height": 150,
+      "size": 842
+    },
+    "medium": {
+      "path": "/path_to_save/ab/cd/abcdef123456/medium.webp",
+      "width": 600,
+      "height": 400,
+      "size": 2948
+    },
+    "large": {
+      "path": "/path_to_save/ab/cd/abcdef123456/large.webp",
+      "width": 1200,
+      "height": 900,
+      "size": 10432
+    }
+  }
+}
+```
+
+`IMAGE_SIZES` must use the `name:WIDTHxHEIGHT` format.
+
 ## TestClient For Integration Tests
 
 `testClient` lets you spin up `TheAPI` for tests and gives you convenient request helpers (`get/post/patch/delete`), generated JWT tokens, and utilities like `deleteTables`/`truncateTables`.

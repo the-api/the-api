@@ -77,10 +77,26 @@ export type UploadResultType = {
   name: string;
   size: number;
   bucket?: string;
+  originalName?: string;
+  sizes?: Record<string, UploadImageSizeResultType>;
+};
+
+export type UploadImageSizeResultType = {
+  path: string;
+  width: number;
+  height: number;
+  size: number;
+};
+
+export type FilesImageSizeType = {
+  name: string;
+  width: number;
+  height: number;
 };
 
 export type FilesOptions = {
   folder?: string;
+  imageSizes?: string | FilesImageSizeType[];
   minio?: {
     bucketName?: string;
     endPoint?: string;
@@ -90,6 +106,17 @@ export type FilesOptions = {
     secretKey?: string;
   };
 };
+
+export type GetBodyFilesOptionsType = {
+  fields?: string[];
+  imagesOnly?: boolean;
+};
+
+export type UploadManyOptionsType = {
+  imagesOnly?: boolean;
+};
+
+export type UploadBodyOptionsType = GetBodyFilesOptionsType;
 
 // ------------------------------------------
 // Database

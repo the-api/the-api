@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
 import { Db } from './Db';
 import type { Server } from 'bun';
-import type { Roles } from 'the-api-roles';
+import type Roles from 'the-api-roles';
 import type { Routings as RoutingsType } from 'the-api-routings';
-import type { AppEnv, TheApiOptionsType, EmailTemplatesType } from './types';
+import type { AppEnv, TheApiOptionsType, RoutingsInputType, EmailTemplatesType } from './types';
 export declare class TheAPI {
     app: Hono<AppEnv>;
     db: Db | null;
@@ -20,8 +20,10 @@ export declare class TheAPI {
         fetch: (req: Request, server: Server<any>) => Response | Promise<Response>;
         port: number;
     }>;
-    addRoutings(routings: RoutingsType | RoutingsType[]): void;
+    destroy(): Promise<void>;
+    addRoutings(routings: RoutingsType | RoutingsInputType): void;
     private collectErrorsAndTemplates;
+    private getFlatRoutings;
     private registerGlobalMiddleware;
     private registerDbMiddleware;
     private inferCrudMethodsFromRoles;
