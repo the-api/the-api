@@ -47,6 +47,9 @@ export type TestClientOptionsType = {
   theApiOptions?: Omit<TheApiOptionsType, 'routings' | 'roles' | 'migrationDirs'>;
 };
 
+const { db } = new Db();
+let instance: TestClient;
+
 export function createRoutings(options?: { migrationDirs?: string[] }) {
   return new Routings(options);
 }
@@ -238,10 +241,8 @@ type TestClientResultType = {
   DateTime: typeof DateTime;
   tokens: TestClientTokensType;
   users: TestClientUsersType;
+  db: Knex;
 };
-
-const { db } = new Db();
-let instance: TestClient;
 
 export async function getTestClient(
   options?: TestClientInitType,
@@ -315,5 +316,5 @@ export async function testClient(
 
   const client = await getTestClient({ app: theAPI.app });
   const { tokens, users } = client;
-  return { client, theAPI, DateTime, tokens, users };
+  return { client, theAPI, DateTime, tokens, users, db };
 }
