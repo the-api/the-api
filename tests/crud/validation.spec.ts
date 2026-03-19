@@ -57,7 +57,11 @@ const crudParams = [
         }),
       },
     },
-  }
+  },
+  {
+    table: 'messagesOwned',
+    prefix: 'messagesOwnedAuto',
+  },
 ];
 
 const { theAPI, client } = await testClient({
@@ -90,6 +94,16 @@ describe('crud validation', () => {
       min: 0,
       max: 5,
     });
+  });
+
+  test('auto validation makes userId optional for POST body', async () => {
+    const { error, result } = await client.post('/messagesOwnedAuto', {
+      warningLevel: 1,
+      body: 'created without explicit owner',
+    });
+
+    expect(error).toEqual(false);
+    expect(result.userId).toBeUndefined();
   });
 
   test('auto validation checks query schema from columns', async () => {

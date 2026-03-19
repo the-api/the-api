@@ -522,6 +522,7 @@ export const buildCrudValidationSchemaFromTable = (
   params: CrudBuilderOptionsType,
 ): CrudValidationSchema => {
   const normalizedParams = normalizeCrudConfig(params);
+  const userIdFieldName = normalizedParams.userIdFieldName || 'userId';
   const columns = resolveTableColumns(c, normalizedParams);
   const columnEntries = Object.entries(columns);
   const columnNames = columnEntries.map(([name]) => name);
@@ -622,7 +623,8 @@ export const buildCrudValidationSchemaFromTable = (
   for (const [name, column] of columnEntries) {
     if (readOnly.includes(name)) continue;
 
-    const required = column.is_nullable === 'NO'
+    const required = name !== userIdFieldName
+      && column.is_nullable === 'NO'
       && (column.column_default === null || typeof column.column_default === 'undefined');
 
     bodyPost[name] = getColumnValidationRule(column, { required });
