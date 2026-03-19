@@ -14,7 +14,7 @@ const roles = new Roles({
   owner: ['users.getFullInfo', 'users.editEmail'], // virtual role, resolved per record
 });
 
-const { theAPI, client } = await testClient({
+const { client } = await testClient({
   routingOptions: { migrationDirs: ['./tests/migrations'] },
   crudParams: [{
     table: 'testNews',
@@ -46,12 +46,6 @@ const unknownToken = client.generateGWT({ id: 4, roles: ['unknown'] });
 const noToken = client.generateGWT({ id: 5 });
 
 describe('Roles', () => {
-  describe('init', () => {
-    test('init', async () => {
-      await theAPI.init();
-    });
-    });
-
   describe('root token create/get', () => {
     test('create testNews', async () => {
       await client.post('/testNews', { name: 'test111', timePublished: 'NOW()', timeDeleted: 'NOW()' }, rootToken);
@@ -118,9 +112,5 @@ describe('Roles', () => {
       const { result } = await client.get('/testNews?_sort=id', noToken);
       expect(result.name).toEqual('ACCESS_DENIED');
     });
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables()
   });
 });

@@ -1,15 +1,12 @@
 import { expect, test, describe } from 'bun:test';
 import { testClient } from '../lib';
 
-const { theAPI, client } = await testClient({
+const { client } = await testClient({
   routingOptions: { migrationDirs: ['./tests/migrations'] },
   crudParams: [{ table: 'testNews' }],
 });
 
 describe('simple CRUD requests', () => {
-  test('init', async () => {
-    await theAPI.init();
-  });
 
   test('GET /testNews', async () => {
     const { result } = await client.get('/testNews');
@@ -75,9 +72,5 @@ describe('simple CRUD requests', () => {
     const { result } = await client.get('/testNews');
 
     expect(result).toEqual([]);
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables()
   });
 });

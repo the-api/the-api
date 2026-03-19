@@ -22,12 +22,9 @@ router.get('/search/:search', async (c: Context) => {
   c.set('result', c.req.param());
 });
 
-const { theAPI, client } = await testClient({ routings: [router] });
+const { client } = await testClient({ routings: [router] });
 
 describe('Core', () => {
-  test('init', async () => {
-    await theAPI.init();
-  });
   test('GET /', async () => {
     const { result } = await client.get('/');
     expect(result).toEqual({ e11:'Hi11', e22:'Hi22' });
@@ -41,9 +38,5 @@ describe('Core', () => {
   test('GET /search/4', async () => {
     const { result } = await client.get('/search/world4');
     expect(result).toEqual({ search: 'world4' });
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables()
   });
 });

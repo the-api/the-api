@@ -21,10 +21,6 @@ router.get('/query', async (c: AppContext) => {
 const { client, theAPI } = await testClient({ routings: [router] });
 
 describe('setQueryParams', () => {
-  test('init', async () => {
-    await theAPI.init();
-  });
-
   test('updates query params for next handlers', async () => {
     const token = client.tokens.admin;
     const res = await theAPI.app.fetch(new Request(
@@ -43,9 +39,5 @@ describe('setQueryParams', () => {
       tags: ['api', 'docs'],
       userId: ['2'],
     });
-  });
-
-  test('finalize', async () => {
-    await theAPI.destroy();
   });
 });

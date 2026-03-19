@@ -9,8 +9,10 @@ defaultRouter.post('/csrf', async (c) => {
 
 const { theAPI: defaultApi } = await testClient({
   routings: [defaultRouter],
+  beforeInit: (theAPI) => {
+    theAPI.app.use('*', csrf());
+  },
 });
-defaultApi.app.use('*', csrf());
 
 const trustedOriginRouter = createRoutings();
 trustedOriginRouter.post('/csrf', async (c) => {
@@ -19,15 +21,12 @@ trustedOriginRouter.post('/csrf', async (c) => {
 
 const { theAPI: trustedOriginApi } = await testClient({
   routings: [trustedOriginRouter],
+  beforeInit: (theAPI) => {
+    theAPI.app.use('*', csrf({ origin: 'https://app.example.com' }));
+  },
 });
-trustedOriginApi.app.use('*', csrf({ origin: 'https://app.example.com' }));
 
 describe('csrf', () => {
-  test('init', async () => {
-    await defaultApi.init();
-    await trustedOriginApi.init();
-  });
-
   test('POST /csrf allows same-origin form request', async () => {
     const res = await defaultApi.app.fetch(
       new Request('http://localhost:7788/csrf', {

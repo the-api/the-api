@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { beforeAll, describe, test, expect } from 'bun:test';
 import * as fs from 'fs/promises';
 import { createRequire } from 'node:module';
 import * as path from 'path';
@@ -76,9 +76,8 @@ const { theAPI, client } = await testClient({
 });
 
 describe('files', () => {
-  test('init', async () => {
+  beforeAll(async () => {
     await fs.rm(uploadsFolder, { recursive: true, force: true });
-    await theAPI.init();
   });
 
   test('POST /upload', async () => {
@@ -254,10 +253,5 @@ describe('files', () => {
         process.env.IMAGE_SIZES = previousImageSizes;
       }
     }
-  });
-
-  test('finalize', async () => {
-    await fs.rm(uploadsFolder, { recursive: true, force: true });
-    await client.deleteTables();
   });
 });

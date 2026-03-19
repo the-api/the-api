@@ -6,7 +6,7 @@ const roles = {
   guest: ['testNews.get'],
 };
 
-const { theAPI, client, tokens } = await testClient({
+const { client, tokens } = await testClient({
   migrationDirs: ['./tests/migrations'],
   crudParams: [{
     table: 'testNews',
@@ -16,13 +16,6 @@ const { theAPI, client, tokens } = await testClient({
 });
 
 describe('guest role', () => {
-  describe('init', () => {
-    test('init', async () => {
-      await client.deleteTables();
-      await theAPI.init();
-    });
-  });
-
   test('GET /testNews is allowed without token for guest role', async () => {
     await client.post('/testNews', { name: 'guest-1' }, tokens.root);
     await client.post('/testNews', { name: 'guest-2' }, tokens.root);
@@ -40,9 +33,5 @@ describe('guest role', () => {
   test('token without roles is not treated as guest', async () => {
     const { result } = await client.get('/testNews?_sort=id', tokens.noRole);
     expect(result.name).toEqual('ACCESS_DENIED');
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables();
   });
 });

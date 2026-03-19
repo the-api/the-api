@@ -1,4 +1,4 @@
-import { expect, test, describe } from 'bun:test';
+import { expect, test, describe, beforeAll } from 'bun:test';
 import { testClient } from '../../lib';
 
 const migrationDirs = ['./tests/migrations'];
@@ -22,22 +22,16 @@ const crudParams = [{
   },
 }];
 
-const { theAPI, client, tokens, users, DateTime } = await testClient({
+const { client, tokens, users, DateTime } = await testClient({
   crudParams,
   migrationDirs,
   roles,
 });
 
 describe('Hidden', () => {
-  describe('init', () => {
-    test('init', async () => {
-      await theAPI.init();
-    });
-
-    test('create testNews', async () => {
+  beforeAll(async () => {
       await client.post('/testNews', { name: 'test111', timePublished: 'NOW()', timeDeleted: 'NOW()' }, tokens.root);
       await client.post('/testNews', { name: 'test112', views: 100, timeCreated: DateTime.fromISO('2024-06-01').toString() }, tokens.root);
-    });
   });
 
   describe('root token', () => {
@@ -157,9 +151,5 @@ describe('Hidden', () => {
       expect(result.timeCreated).toEqual(undefined);
       expect(result.views).toEqual(undefined);
     });
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables()
   });
 });

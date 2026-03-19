@@ -10,13 +10,12 @@ router.post('/body-limit', async (c) => {
 
 const { theAPI } = await testClient({
   routings: [router],
+  beforeInit: (theAPI) => {
+    theAPI.app.use('*', bodyLimit({ maxSize: 5 }));
+  },
 });
-theAPI.app.use('*', bodyLimit({ maxSize: 5 }));
 
 describe('bodyLimit', () => {
-  test('init', async () => {
-    await theAPI.init();
-  });
 
   test('POST /body-limit rejects payloads larger than maxSize', async () => {
     const res = await theAPI.app.fetch(

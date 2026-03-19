@@ -9,13 +9,12 @@ router.get('/compress', async (c) => {
 
 const { theAPI } = await testClient({
   routings: [router],
+  beforeInit: (theAPI) => {
+    theAPI.app.use('*', compress({ threshold: 1 }));
+  },
 });
-theAPI.app.use('*', compress({ threshold: 1 }));
 
 describe('compress', () => {
-  test('init', async () => {
-    await theAPI.init();
-  });
 
   test('GET /compress adds content-encoding for compressible responses', async () => {
     const res = await theAPI.app.fetch(

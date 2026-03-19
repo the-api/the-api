@@ -1,7 +1,7 @@
-import { expect, test, describe } from 'bun:test';
+import { expect, test, describe, beforeAll } from 'bun:test';
 import { testClient } from '../lib';
 
-const { theAPI, client, DateTime } = await testClient({
+const { client, DateTime } = await testClient({
   routingOptions: { migrationDirs: ['./tests/migrations'] },
   crudParams: [
     { table: 'testTypes' },
@@ -10,12 +10,7 @@ const { theAPI, client, DateTime } = await testClient({
 });
 
 describe('GET after', () => {
-  describe('init', () => {
-    test('init', async () => {
-      await theAPI.init();
-    });
-  
-    test('create testNews', async () => {
+  beforeAll(async () => {
       await client.post('/testTypes', { name: 'type1' });
       await client.post('/testTypes', { name: 'type2' });
       await client.post('/testNews', { name: 'test111', typeId: 1 });
@@ -23,7 +18,6 @@ describe('GET after', () => {
       await client.post('/testNews', { name: 'test112', typeId: 1, timePublished: DateTime.local().setZone('America/New_York').toString()});
       await new Promise(resolve => setTimeout(resolve, 10));
       await client.post('/testNews', { name: 'test222', typeId: 2 });
-    });
   });
 
   describe('after by timeCreated, limit 1', () => {
@@ -191,9 +185,5 @@ describe('GET after', () => {
       });
       expect(result).toEqual([]);
     });
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables();
   });
 });

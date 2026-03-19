@@ -1,9 +1,22 @@
-import { describe, expect, test } from 'bun:test';
-import { createRoutings, testClient } from './lib';
-import { middlewares } from '../src';
-import type { AppContext } from '../src';
+import { describe, expect, mock, test } from 'bun:test';
+
+let emailSink: unknown;
+
+mock.module('nodemailer', () => ({
+  createTransport: () => ({
+    sendMail: async (data: unknown) => {
+      emailSink = data;
+      return data;
+    },
+  }),
+}));
+
+const { createRoutings, testClient } = await import('./lib');
+const { middlewares } = await import('../src');
+type AppContext = import('../src').AppContext;
 
 const router = createRoutings();
+
 router.get('/email_text', async (c: AppContext) => {
   await c.var.email({ to: 'test@test', subject: 'hi', text: 'hi2' });
 });
@@ -33,39 +46,31 @@ const emailTemplates = {
   testData: { subject: '{{name.firstName}}!', text: 'Hello, {{name.firstName}}' },
 };
 
-const { theAPI, client } = await testClient({
+const { client } = await testClient({
   routings: [middlewares.errors, middlewares.email, router],
   theApiOptions: { emailTemplates },
 });
 
 describe('email', () => {
-  test('init', async () => {
-    await theAPI.init();
-  });
-
   test('GET /email_text', async () => {
     await client.get('/email_text');
-    expect((client.getValue('email') as any).html).toEqual('hi2');
+    expect((emailSink as any).html).toEqual('hi2');
   });
 
   test('GET /email_template1', async () => {
     await client.get('/email_template1');
-    expect((client.getValue('email') as any).html).toEqual('aa2');
+    expect((emailSink as any).html).toEqual('aa2');
   });
 
   test('GET /email_template2', async () => {
     await client.get('/email_template2');
-    expect((client.getValue('email') as any).html).toEqual('bb2');
+    expect((emailSink as any).html).toEqual('bb2');
   });
 
   test('GET /email_data', async () => {
     await client.get('/email_data');
-    const stored = client.getValue('email') as any;
+    const stored = emailSink as any;
     expect(stored.subject).toEqual('aa!');
     expect(stored.html).toEqual('Hello, aa');
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables();
   });
 });

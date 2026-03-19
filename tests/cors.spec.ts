@@ -13,13 +13,12 @@ router.post('/cors', async (c) => {
 
 const { theAPI } = await testClient({
   routings: [router],
+  beforeInit: (theAPI) => {
+    theAPI.app.use('*', cors());
+  },
 });
-theAPI.app.use('*', cors());
 
 describe('cors', () => {
-  test('init', async () => {
-    await theAPI.init();
-  });
 
   test('GET /cors returns CORS headers', async () => {
     const res = await theAPI.app.fetch(

@@ -22,20 +22,13 @@ const crudParams = [
   },
 ];
 
-const { theAPI, client, tokens } = await testClient({
+const { client, tokens } = await testClient({
   migrationDirs,
   crudParams,
   roles,
 });
 
 describe('protected methods', () => {
-  describe('init', () => {
-    test('init', async () => {
-      await client.deleteTables();
-      await theAPI.init();
-    });
-    });
-
   describe('all protected', () => {
     describe('root token create/get', () => {
       test('create testNews', async () => {
@@ -225,9 +218,5 @@ describe('protected methods', () => {
     test('trunicate tables', async () => {
       await client.truncateTables('testNews');
     });
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables()
   });
 });

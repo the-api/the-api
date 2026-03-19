@@ -1,4 +1,4 @@
-import { expect, test, describe } from 'bun:test';
+import { expect, test, describe, beforeAll } from 'bun:test';
 import { testClient } from '../lib';
 import {type  CrudBuilderOptionsType } from '../../src';
 
@@ -19,24 +19,18 @@ const { theAPI, client } = await testClient({
 });
 
 describe('GET relations', () => {
-  describe('init', () => {
-    test('init', async () => {
-      await theAPI.init();
-    });
-  
-    test('create testNews', async () => {
-      await client.post('/testTypes', { name: 'type1' });
-      await client.post('/testTypes', { name: 'type2' });
-      await client.post('/testTypes', { name: 'type3' });
-      await client.post('/testTypes', { name: 'type4' });
-      await client.post('/testTypes', { name: 'type5' });
-      await client.post('/testTypeAges', { age: '0-3', typeId: 1 });
-      await client.post('/testTypeAges', { age: '3-6', typeId: 1 });
-      await client.post('/testTypeAges', { age: '7-14', typeId: 1 });
-      await client.post('/testTypeAges', { age: '7-14', typeId: 2 });
-      await client.post('/testTypeAges', { age: '15-21', typeId: 2 });
-      await client.post('/testTypeAges', { age: '22-99', typeId: 4 });
-    });
+  beforeAll(async () => {
+    await client.post('/testTypes', { name: 'type1' });
+    await client.post('/testTypes', { name: 'type2' });
+    await client.post('/testTypes', { name: 'type3' });
+    await client.post('/testTypes', { name: 'type4' });
+    await client.post('/testTypes', { name: 'type5' });
+    await client.post('/testTypeAges', { age: '0-3', typeId: 1 });
+    await client.post('/testTypeAges', { age: '3-6', typeId: 1 });
+    await client.post('/testTypeAges', { age: '7-14', typeId: 1 });
+    await client.post('/testTypeAges', { age: '7-14', typeId: 2 });
+    await client.post('/testTypeAges', { age: '15-21', typeId: 2 });
+    await client.post('/testTypeAges', { age: '22-99', typeId: 4 });
   });
 
   describe('join', () => {
@@ -59,9 +53,5 @@ describe('GET relations', () => {
         },
       });
     });
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables()
   });
 });

@@ -8,7 +8,7 @@ const roles = {
 };
 
 describe('auto protected methods', async () => {
-  const { theAPI, client, db } = await testClient({
+  const { client } = await testClient({
     routingOptions: { migrationDirs: ['./tests/migrations'] },
     crudParams: [{
       table: 'testTypesUsers',
@@ -17,12 +17,6 @@ describe('auto protected methods', async () => {
     roles,
   });
   const { tokens } = client;
-
-  describe('init', () => {
-    test('init', async () => {
-      await theAPI.init();
-    });
-  });
 
   test('POST /users is not protected when only users.delete exists in roles', async () => {
     const { result } = await client.post('/users', { name: 'auto-method-1' }, tokens.noToken);
@@ -61,9 +55,5 @@ describe('auto protected methods', async () => {
 
     const deleted = await client.delete(`/users/${created.id}`, tokens.noRole);
     expect(deleted.result.ok).toEqual(true);
-  });
-
-  test('finalize', async () => {
-    await client.truncateTables('testTypes');
   });
 });

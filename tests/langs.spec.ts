@@ -1,8 +1,8 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test, beforeAll } from 'bun:test';
 import { testClient } from './lib';
 import { langs } from 'the-api-langs';
 
-const { theAPI, client } = await testClient({
+const { client } = await testClient({
   routingOptions: { migrationDirs: ['./tests/migrations'] },
   routings: [langs],
   crudParams: [
@@ -16,19 +16,13 @@ const { theAPI, client } = await testClient({
 });
 
 describe('langs', () => {
-  describe('init', () => {
-    test('init', async () => {
-      await theAPI.init();
-    });
-
-    test('create testNews', async () => {
+  beforeAll(async () => {
       await client.post('/langs', { textKey: 1, lang: 'en', text: 'test111' });
       await client.post('/langs', { textKey: 1, lang: 'cn', text: '测试111' });
       await client.post('/langs', { textKey: 2, lang: 'en', text: 'test222' });
       await client.post('/langs', { textKey: 2, lang: 'cn', text: '测试222' });
       await client.post('/testNews', { name: 'test111' });
       await client.post('/testNews', { name: 'test222' });
-    });
   });
 
   describe('translate', () => {
@@ -90,9 +84,5 @@ describe('langs', () => {
       const { result } = await client.get('/testNews?_fields=name&_lang=cn&_search=测111');
       expect(result[0].name).toEqual('测试111');
     });
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables()
   });
 });

@@ -61,15 +61,12 @@ const crudParams = [
   },
 ];
 
-const { theAPI, client } = await testClient({
+const { client } = await testClient({
   migrationDirs,
   crudParams,
 });
 
 describe('crud validation', () => {
-  test('init', async () => {
-    await theAPI.init();
-  });
 
   test('auto validation returns all errors for POST body', async () => {
     const { result } = await client.post('/messagesAuto', {});
@@ -218,9 +215,5 @@ describe('crud validation', () => {
     const details = badPatch.result.additional as Array<Record<string, unknown>>;
     expect(details[0]?.field).toEqual('body.warningLevel');
     expect(details[0]?.message).toEqual('warningLevel must be a number less than or equal to 5');
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables();
   });
 });

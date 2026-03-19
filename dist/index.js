@@ -52278,10 +52278,66 @@ import * as path3 from "path";
 import { DateTime } from "luxon";
 import { testClient as honoTestClient } from "hono/testing";
 import Roles from "the-api-roles";
-var { db: db2 } = new Db;
-var instance;
-function createRoutings(options) {
-  return new Routings(options);
+var DEFAULT_USERS = {
+  root: { id: 1, userId: 1, roles: ["root"] },
+  admin: { id: 2, userId: 2, roles: ["admin"] },
+  registered: { id: 3, userId: 3, roles: ["registered"] },
+  manager: { id: 4, userId: 4, roles: ["manager"] },
+  unknown: { id: 5, userId: 5, roles: ["unknown"] },
+  noRole: { id: 6, userId: 6 }
+};
+var _db = null;
+function getDb() {
+  if (!_db)
+    _db = new Db().db;
+  return _db;
+}
+function generateToken(params, expiresIn = process.env.JWT_EXPIRES_IN || "1h") {
+  return jwt2.sign(params, process.env.JWT_SECRET || "", { expiresIn });
+}
+function createUsersWithTokens() {
+  const users = structuredClone(DEFAULT_USERS);
+  const tokens = { noToken: "" };
+  for (const [role, user2] of Object.entries(users)) {
+    if (!user2)
+      continue;
+    user2.token = generateToken(user2);
+    tokens[role] = user2.token;
+  }
+  return { users, tokens };
+}
+var isRolesInstance = (v) => !!v && typeof v.addRoutePermissions === "function";
+function buildRoles(roles) {
+  if (!roles)
+    return;
+  return isRolesInstance(roles) ? roles : new Roles(roles);
+}
+function buildRoutings(options) {
+  const {
+    crudParams = [],
+    migrationDirs,
+    routingOptions,
+    routings = [],
+    newRoutings
+  } = options;
+  const result = [...routings];
+  if (crudParams.length || migrationDirs?.length || routingOptions?.migrationDirs?.length) {
+    const crudRouting = new Routings({
+      migrationDirs: routingOptions?.migrationDirs || migrationDirs
+    });
+    for (const params of crudParams) {
+      crudRouting.crud(params);
+    }
+    result.push(crudRouting);
+  }
+  if (newRoutings) {
+    const customRouting = new Routings({
+      migrationDirs: routingOptions?.migrationDirs || migrationDirs
+    });
+    newRoutings(customRouting);
+    result.push(customRouting);
+  }
+  return result;
 }
 
 class TestClient {
@@ -52289,57 +52345,30 @@ class TestClient {
   headers;
   vars = {};
   db;
-  tokens = {};
-  users = {
-    root: { id: 1, userId: 1, roles: ["root"] },
-    admin: { id: 2, userId: 2, roles: ["admin"] },
-    registered: { id: 3, userId: 3, roles: ["registered"] },
-    manager: { id: 4, userId: 4, roles: ["manager"] },
-    unknown: { id: 5, userId: 5, roles: ["unknown"] },
-    noRole: { id: 6, userId: 6 }
-  };
-  constructor(options) {
-    const { app, headers } = options || {};
-    if (app)
-      this.app = app;
-    if (headers)
-      this.headers = headers;
-    this.db = db2;
-    this.tokens.noToken = "";
-    for (const role of Object.keys(this.users)) {
-      const user2 = this.users[role];
-      if (!user2)
-        continue;
-      user2.token = this.generateGWT(user2);
-      this.tokens[role] = user2.token;
-    }
-  }
-  async init({ app, headers }) {
+  tokens;
+  users;
+  constructor(app, db2, headers) {
     this.app = app;
+    this.db = db2;
     this.headers = headers;
+    const { users, tokens } = createUsersWithTokens();
+    this.users = users;
+    this.tokens = tokens;
   }
   async deleteTables() {
-    const tables = await db2.raw(`SELECT table_name, table_schema
+    const tables = await this.db.raw(`SELECT table_name, table_schema
        FROM information_schema.tables
        WHERE table_catalog = current_database()
-         AND (
-           table_schema = current_schema()
-           OR table_schema = 'public'
-         )`);
+         AND (table_schema = current_schema() OR table_schema = 'public')`);
     for (const { table_name, table_schema } of tables.rows) {
-      await db2.raw(`DROP TABLE IF EXISTS "${table_schema}"."${table_name}" CASCADE`);
+      await this.db.raw(`DROP TABLE IF EXISTS "${table_schema}"."${table_name}" CASCADE`);
     }
-    await db2.raw("DROP EXTENSION IF EXISTS pg_trgm");
+    await this.db.raw("DROP EXTENSION IF EXISTS pg_trgm");
   }
   async truncateTables(tables) {
     for (const table of [].concat(tables)) {
-      await db2(table).del();
+      await this.db(table).del();
     }
-  }
-  async getClient(options) {
-    const theAPI = new TheAPI(options);
-    await theAPI.init();
-    return theAPI.app;
   }
   async request(method, requestPath, body, token) {
     const options = {
@@ -52350,16 +52379,16 @@ class TestClient {
     const res = await pathArr.reduce((acc, key) => acc[key], client)[`$${method}`](body, options);
     return res.json();
   }
-  async get(pathName, token) {
-    return this.request("GET", pathName, undefined, token);
+  async get(p, token) {
+    return this.request("GET", p, undefined, token);
   }
-  async post(pathName, json, token) {
-    return this.request("POST", pathName, { json }, token);
+  async post(p, json, token) {
+    return this.request("POST", p, { json }, token);
   }
-  async postForm(pathName, form, token) {
-    return this.request("POST", pathName, { form }, token);
+  async postForm(p, form, token) {
+    return this.request("POST", p, { form }, token);
   }
-  async postFormRequest(pathName, obj, token) {
+  async postFormRequest(p, obj, token) {
     const body = new FormData;
     for (const [key, val] of Object.entries(obj)) {
       if (Array.isArray(val)) {
@@ -52369,31 +52398,30 @@ class TestClient {
       }
     }
     const headers = token ? { Authorization: `BEARER ${token}` } : this.headers;
-    const req = new Request(`http://localhost:7788${pathName}`, {
+    const req = new Request(`http://localhost:7788${p}`, {
       method: "POST",
       body,
       headers
     });
-    return this.app?.fetch(req);
+    return this.app.fetch(req);
   }
   appendFormValue(body, key, value) {
-    if (value === undefined) {
+    if (value === undefined)
       return;
-    }
     if (value instanceof Blob) {
       body.append(key, value);
       return;
     }
     body.append(key, String(value));
   }
-  async patch(pathName, json, token) {
-    return this.request("PATCH", pathName, { json }, token);
+  async patch(p, json, token) {
+    return this.request("PATCH", p, { json }, token);
   }
-  async delete(pathName, token) {
-    return this.request("DELETE", pathName, undefined, token);
+  async delete(p, token) {
+    return this.request("DELETE", p, undefined, token);
   }
-  generateGWT(params, expiresIn = process.env.JWT_EXPIRES_IN || "1h") {
-    return jwt2.sign(params, process.env.JWT_SECRET || "", { expiresIn });
+  generateGWT(params, expiresIn) {
+    return generateToken(params, expiresIn);
   }
   storeValue(key, value) {
     this.vars[key] = value;
@@ -52402,67 +52430,33 @@ class TestClient {
     return this.vars[key];
   }
   async readFile(filePath) {
-    const fileBuffer = await fs4.readFile(filePath);
-    const fileName = path3.basename(filePath);
-    return new File([fileBuffer], fileName);
+    const buf = await fs4.readFile(filePath);
+    return new File([buf], path3.basename(filePath));
   }
 }
-async function getTestClient(options) {
-  if (!instance) {
-    instance = new TestClient;
-  }
-  if (options)
-    await instance.init(options);
-  return instance;
+function createRoutings(options) {
+  return new Routings(options);
 }
-var isRolesInstance = (value) => !!value && typeof value.addRoutePermissions === "function";
-async function testClient(options) {
-  const {
-    crudParams = [],
-    migrationDirs,
-    routingOptions,
-    roles,
-    routings = [],
-    newRoutings,
-    theApiOptions = {}
-  } = options || {};
-  const allRoutings = [...routings];
+async function testClient(options = {}) {
+  const db2 = getDb();
+  const allRoutings = buildRoutings(options);
   const flatRoutings = allRoutings.flat();
-  if (crudParams.length || migrationDirs?.length || routingOptions?.migrationDirs?.length) {
-    const crudRouting = new Routings({
-      migrationDirs: routingOptions?.migrationDirs || migrationDirs
-    });
-    for (const params of crudParams) {
-      crudRouting.crud(params);
-    }
-    allRoutings.push(crudRouting);
-  }
-  if (newRoutings) {
-    const customRouting = new Routings({
-      migrationDirs: routingOptions?.migrationDirs || migrationDirs
-    });
-    newRoutings(customRouting);
-    allRoutings.push(customRouting);
-  }
-  let rolesInstance;
-  if (roles) {
-    if (isRolesInstance(roles)) {
-      rolesInstance = roles;
-    } else {
-      rolesInstance = new Roles(roles);
-    }
-  }
+  const rolesInstance = buildRoles(options.roles);
+  const hasMigrationDirsInRoutings = flatRoutings.some((r) => Array.isArray(r.migrationDirs));
   const theAPI = new TheAPI({
-    ...theApiOptions,
+    ...options.theApiOptions,
     routings: allRoutings,
-    migrationDirs: flatRoutings.some((routing) => Array.isArray(routing.migrationDirs)) ? undefined : migrationDirs,
+    migrationDirs: hasMigrationDirsInRoutings ? undefined : options.migrationDirs,
     roles: rolesInstance
   });
+  await options.beforeInit?.(theAPI);
+  await theAPI.init();
+  const client = new TestClient(theAPI.app, db2);
   const bunTest = await import("bun:test").catch(() => null);
   bunTest?.afterAll?.(async () => {
+    await client.deleteTables();
     await theAPI.destroy();
   });
-  const client = await getTestClient({ app: theAPI.app });
   const { tokens, users } = client;
   return { client, theAPI, DateTime, tokens, users, db: db2 };
 }
@@ -53415,7 +53409,6 @@ var createCrudValidationMiddleware2 = (params) => {
 export {
   testClient,
   exports_middlewares as middlewares,
-  getTestClient,
   etag,
   csrf,
   createRoutings,

@@ -41,12 +41,9 @@ router.errors({
   }
 });
 
-const { theAPI, client } = await testClient({ routings: [errors, router] });
+const { client } = await testClient({ routings: [errors, router] });
 
 describe('errors', () => {
-  test('init', async () => {
-    await theAPI.init();
-  });
 
   test('GET /not/found', async () => {
     const { result, ...r } = await client.get('/not/found');
@@ -102,9 +99,5 @@ describe('errors', () => {
     expect(result.status).toEqual(500);
     expect(result.code).toEqual(11);
     expect(meta).toEqual({ x: 3 });
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables()
   });
 });

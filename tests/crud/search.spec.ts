@@ -1,7 +1,7 @@
-import { expect, test, describe } from 'bun:test';
+import { expect, test, describe, beforeAll } from 'bun:test';
 import { testClient } from '../lib';
 
-const { theAPI, client } = await testClient({
+const { client } = await testClient({
   routingOptions: { migrationDirs: ['./tests/migrations'] },
   crudParams: [{
     table: 'testNews',
@@ -10,17 +10,11 @@ const { theAPI, client } = await testClient({
 });
 
 describe('GET search', () => {
-  describe('init', () => {
-    test('init', async () => {
-      await theAPI.init();
-    });
-  
-    test('create testNews', async () => {
+  beforeAll(async () => {
       await client.post('/testNews', { name: 'test111' });
       await client.post('/testNews', { name: 'test112' });
       await client.post('/testNews', { name: 'test222' });
       await client.post('/testNews', { name: '测试222' });
-    });
   });
 
   describe('exact search', () => {
@@ -84,9 +78,5 @@ describe('GET search', () => {
       const { result } = await client.get('/testNews?_search=测试试22');
       expect(result[0].name).toEqual('测试222');
     });
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables()
   });
 });

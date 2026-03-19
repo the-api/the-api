@@ -1,8 +1,8 @@
-import { expect, test, describe } from 'bun:test';
+import { expect, test, describe, beforeAll } from 'bun:test';
 import { DateTime } from'luxon';
 import { testClient } from '../lib';
 
-const { theAPI, client } = await testClient({
+const { client } = await testClient({
   routingOptions: { migrationDirs: ['./tests/migrations'] },
   crudParams: [{
     table: 'testNews',
@@ -14,15 +14,9 @@ const { theAPI, client } = await testClient({
 });
 
 describe('Hidden and Readonly Fields', () => {
-  describe('init', () => {
-    test('init', async () => {
-      await theAPI.init();
-    });
-
-    test('create testNews', async () => {
+  beforeAll(async () => {
       await client.post('/testNews', { name: 'test111', timePublished: 'NOW()', timeDeleted: 'NOW()' });
       await client.post('/testNews', { name: 'test112', views: 100, timeCreated: DateTime.fromISO('2024-06-01').toString() });
-    });
   });
 
   describe('hidden files', () => {
@@ -56,9 +50,5 @@ describe('Hidden and Readonly Fields', () => {
       expect(result.views).toEqual(0);
       expect(result.timeCreated > '2024-06-02').toEqual(true);
     });
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables()
   });
 });

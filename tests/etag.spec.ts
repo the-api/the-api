@@ -10,13 +10,12 @@ router.get('/etag', async (c) => {
 
 const { theAPI } = await testClient({
   routings: [router],
+  beforeInit: (theAPI) => {
+    theAPI.app.use('*', etag());
+  },
 });
-theAPI.app.use('*', etag());
 
 describe('etag', () => {
-  test('init', async () => {
-    await theAPI.init();
-  });
 
   test('GET /etag returns ETag header', async () => {
     const res = await theAPI.app.fetch(

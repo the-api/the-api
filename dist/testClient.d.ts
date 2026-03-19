@@ -11,10 +11,6 @@ type BodyType = string | number | boolean | HttpPostBodyType;
 export type HttpPostBodyType = {
     [key: string]: BodyType | BodyType[];
 };
-export type TestClientInitType = {
-    app: Hono<any>;
-    headers?: IncomingHttpHeaders;
-};
 export type TestClientUserType = {
     id: number;
     userId?: number;
@@ -33,37 +29,10 @@ export type TestClientOptionsType = {
     roles?: Roles | TestClientRolesConfigType;
     routings?: RoutingsInputType;
     newRoutings?: (router: Routings) => void;
+    beforeInit?: (theAPI: TheAPI) => void | Promise<void>;
     theApiOptions?: Omit<TheApiOptionsType, 'routings' | 'roles' | 'migrationDirs'>;
 };
-export declare function createRoutings(options?: {
-    migrationDirs?: string[];
-}): Routings;
-export declare class TestClient {
-    private app;
-    private headers?;
-    private vars;
-    db: Knex;
-    tokens: TestClientTokensType;
-    users: TestClientUsersType;
-    constructor(options?: TestClientInitType);
-    init({ app, headers }: TestClientInitType): Promise<void>;
-    deleteTables(): Promise<void>;
-    truncateTables(tables: string[] | string): Promise<void>;
-    getClient(options: TheApiOptionsType): Promise<Hono<import("./types").AppEnv, import("hono/types").BlankSchema, "/">>;
-    request(method: MethodType, requestPath: string, body?: HttpPostBodyType, token?: string): Promise<any>;
-    get(pathName: string, token?: string): Promise<any>;
-    post(pathName: string, json: HttpPostBodyType, token?: string): Promise<any>;
-    postForm(pathName: string, form: HttpPostBodyType, token?: string): Promise<any>;
-    postFormRequest(pathName: string, obj: Record<string, unknown>, token?: string): Promise<Response>;
-    private appendFormValue;
-    patch(pathName: string, json: HttpPostBodyType, token?: string): Promise<any>;
-    delete(pathName: string, token?: string): Promise<any>;
-    generateGWT(params: Record<string, unknown>, expiresIn?: string): string;
-    storeValue(key: string, value: unknown): void;
-    getValue(key: string): unknown;
-    readFile(filePath: string): Promise<File>;
-}
-type TestClientResultType = {
+export type TestClientResultType = {
     client: TestClient;
     theAPI: TheAPI;
     DateTime: typeof DateTime;
@@ -71,7 +40,43 @@ type TestClientResultType = {
     users: TestClientUsersType;
     db: Knex;
 };
-export declare function getTestClient(options?: TestClientInitType): Promise<TestClient>;
+export declare class TestClient {
+    private readonly app;
+    private readonly headers?;
+    private readonly vars;
+    readonly db: Knex;
+    readonly tokens: TestClientTokensType;
+    readonly users: TestClientUsersType;
+    /**
+     * Конструктор принимает всё необходимое — объект сразу готов к работе,
+     * никакого отложенного init().
+     */
+    constructor(app: Hono<any>, db: Knex, headers?: IncomingHttpHeaders);
+    deleteTables(): Promise<void>;
+    truncateTables(tables: string[] | string): Promise<void>;
+    request(method: MethodType, requestPath: string, body?: HttpPostBodyType, token?: string): Promise<any>;
+    get(p: string, token?: string): Promise<any>;
+    post(p: string, json: HttpPostBodyType, token?: string): Promise<any>;
+    postForm(p: string, form: HttpPostBodyType, token?: string): Promise<any>;
+    postFormRequest(p: string, obj: Record<string, unknown>, token?: string): Promise<Response>;
+    private appendFormValue;
+    patch(p: string, json: HttpPostBodyType, token?: string): Promise<any>;
+    delete(p: string, token?: string): Promise<any>;
+    generateGWT(params: Record<string, unknown>, expiresIn?: string): string;
+    storeValue(key: string, value: unknown): void;
+    getValue(key: string): unknown;
+    readFile(filePath: string): Promise<File>;
+}
+export declare function createRoutings(options?: {
+    migrationDirs?: string[];
+}): Routings;
+/**
+ * Главная точка входа для тестов.
+ *
+ * - Создаёт свежий TheAPI + TestClient на каждый вызов (без singleton)
+ * - Автоматически вызывает theAPI.init()
+ * - Автоматически регистрирует afterAll для очистки
+ */
 export declare function testClient(options?: TestClientOptionsType): Promise<TestClientResultType>;
 export {};
 //# sourceMappingURL=testClient.d.ts.map

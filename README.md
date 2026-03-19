@@ -1159,7 +1159,7 @@ Helper:
 
 What `testClient` returns:
 
-- `theAPI` - initialized `TheAPI` instance (call `await theAPI.init()` in tests)
+- `theAPI` - already initialized `TheAPI` instance, useful when you need direct access to `theAPI.app`
 - `client` - request helper with methods: `get`, `post`, `patch`, `delete`, `postForm`, `postFormRequest`, `deleteTables`, `truncateTables`, `readFile`, `generateGWT`, `storeValue`, `getValue`
 - `tokens` - ready-to-use JWT tokens for default test users (`root`, `admin`, `registered`, `manager`, `unknown`, `noRole`) and `noToken` as an empty string
 - `users` - default test users payload (`root`, `admin`, `registered`, `manager`, `unknown`, `noRole`)
@@ -1171,13 +1171,12 @@ Minimal example:
 import { test, expect } from 'bun:test';
 import { testClient } from 'the-api';
 
-const { theAPI, client } = await testClient({
+const { client } = await testClient({
   crudParams: [{ table: 'messages' }],
   migrationDirs: ['./migrations'],
 });
 
 test('messages list', async () => {
-  await theAPI.init();
   const { result } = await client.get('/messages');
   expect(Array.isArray(result)).toEqual(true);
 });
@@ -1212,13 +1211,11 @@ const {
 });
 
 test('full testClient usage', async () => {
-  await theAPI.init();
   await client.post('/messages', { body: `created ${DateTime.now().toISO()}` }, tokens.root);
   const { result } = await client.get('/messages', tokens.admin);
   expect(result.length > 0).toEqual(true);
   expect(users.root.id).toEqual(1);
   await client.truncateTables('messages');
-  await client.deleteTables();
 });
 ```
 
@@ -1236,10 +1233,9 @@ router.get('/check-migration', async (c: AppContext) => {
   c.set('result', await c.var.db('testNews'));
 });
 
-const { theAPI, client } = await testClient({ routings: [router] });
+const { client } = await testClient({ routings: [router] });
 
 test('migration route', async () => {
-  await theAPI.init();
   const { result } = await client.get('/check-migration');
   expect(result[0].name).toEqual('test');
 });
@@ -1259,13 +1255,12 @@ const newRoutings: NonNullable<TestClientOptionsType['newRoutings']> = (router) 
   });
 };
 
-const { theAPI, client } = await testClient({
+const { client } = await testClient({
   migrationDirs: ['./tests/migrations'],
   newRoutings,
 });
 
 test('migration route via newRoutings', async () => {
-  await theAPI.init();
   const { result } = await client.get('/check-migration');
   expect(result[0].name).toEqual('test');
 });

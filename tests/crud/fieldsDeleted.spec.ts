@@ -1,7 +1,7 @@
-import { expect, test, describe } from 'bun:test';
+import { expect, test, describe, beforeAll } from 'bun:test';
 import { testClient } from '../lib';
 
-const { theAPI, client } = await testClient({
+const { client } = await testClient({
   routingOptions: { migrationDirs: ['./tests/migrations'] },
   crudParams: [{
     table: 'testNews',
@@ -22,15 +22,9 @@ const { theAPI, client } = await testClient({
 });
 
 describe('GET fields', () => {
-  describe('init', () => {
-    test('init', async () => {
-      await theAPI.init();
-    });
-  
-    test('create testNews', async () => {
+  beforeAll(async () => {
       await client.post('/testNews', { name: 'test111', timePublished: 'NOW()', timeDeleted: 'NOW()', isDeleted: true });
       await client.post('/testNews', { name: 'test112' });
-    });
   });
 
   describe('check hidden fields', () => {
@@ -87,9 +81,5 @@ describe('GET fields', () => {
       expect(result.name).toEqual('Deleted News');
       expect(result.newsName).toEqual('test111');
     });
-  });
-
-  test('finalize', async () => {
-    await client.deleteTables()
   });
 });
