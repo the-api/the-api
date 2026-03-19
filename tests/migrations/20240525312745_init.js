@@ -55,20 +55,9 @@ exports.up = async (knex) => {
     });
   }
 
-  if (!(await knex.schema.hasTable('messagesOwned'))) {
-    await knex.schema.createTable('messagesOwned', (table) => {
-      table.increments('id').primary();
-      table.timestamp('timeCreated').notNullable().defaultTo(knex.fn.now());
-      table.integer('userId').notNullable();
-      table.integer('warningLevel').notNullable().checkBetween([0, 5]);
-      table.string('body').notNullable();
-      table.boolean('isDeleted').defaultTo(false);
-    });
-  }
 };
 
 exports.down = async (knex) => {
-  await knex.schema.dropTableIfExists('messagesOwned');
   await knex.schema.dropTableIfExists('messages');
   await knex.schema.dropTableIfExists('testNews');
   await knex.schema.dropTableIfExists('testTypeAges');

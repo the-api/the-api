@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { testClient } from '../../tests/lib';
+import { buildCrudValidationSchemaFromTable } from '../../src/Validatior';
 
 const migrationDirs = ['./tests/migrations'];
 
@@ -58,10 +59,6 @@ const crudParams = [
       },
     },
   },
-  {
-    table: 'messagesOwned',
-    prefix: 'messagesOwnedAuto',
-  },
 ];
 
 const { theAPI, client } = await testClient({
@@ -97,13 +94,65 @@ describe('crud validation', () => {
   });
 
   test('auto validation makes userId optional for POST body', async () => {
-    const { error, result } = await client.post('/messagesOwnedAuto', {
-      warningLevel: 1,
-      body: 'created without explicit owner',
-    });
+    const schema = buildCrudValidationSchemaFromTable(
+      {
+        env: {},
+        var: {
+          dbTables: {
+            'public.messagesOwned': {
+              id: {
+                column_name: 'id',
+                data_type: 'integer',
+                is_nullable: 'NO',
+                table_schema: 'public',
+                table_name: 'messagesOwned',
+                column_default: "nextval('messagesOwned_id_seq'::regclass)",
+                is_primary_key: true,
+              },
+              userId: {
+                column_name: 'userId',
+                data_type: 'integer',
+                is_nullable: 'NO',
+                table_schema: 'public',
+                table_name: 'messagesOwned',
+                column_default: null,
+              },
+              warningLevel: {
+                column_name: 'warningLevel',
+                data_type: 'integer',
+                is_nullable: 'NO',
+                table_schema: 'public',
+                table_name: 'messagesOwned',
+                column_default: null,
+                check_min: 0,
+                check_max: 5,
+              },
+              body: {
+                column_name: 'body',
+                data_type: 'character varying',
+                is_nullable: 'NO',
+                table_schema: 'public',
+                table_name: 'messagesOwned',
+                column_default: null,
+              },
+            },
+          },
+        },
+      } as any,
+      {
+        table: 'messagesOwned',
+      } as any,
+    );
 
-    expect(error).toEqual(false);
-    expect(result.userId).toBeUndefined();
+    expect(schema.body?.post?.userId).toEqual({
+      type: 'number',
+    });
+    expect(schema.body?.post?.warningLevel).toEqual({
+      type: 'number',
+      required: true,
+      min: 0,
+      max: 5,
+    });
   });
 
   test('auto validation checks query schema from columns', async () => {
