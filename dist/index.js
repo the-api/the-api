@@ -52437,12 +52437,23 @@ class TestClient {
 function createRoutings(options) {
   return new Routings(options);
 }
+async function dropAllTables(db2) {
+  const tables = await db2.raw(`SELECT table_name, table_schema
+     FROM information_schema.tables
+     WHERE table_catalog = current_database()
+       AND (table_schema = current_schema() OR table_schema = 'public')`);
+  for (const { table_name, table_schema } of tables.rows) {
+    await db2.raw(`DROP TABLE IF EXISTS "${table_schema}"."${table_name}" CASCADE`);
+  }
+  await db2.raw("DROP EXTENSION IF EXISTS pg_trgm");
+}
 async function testClient(options = {}) {
   const db2 = getDb();
   const allRoutings = buildRoutings(options);
   const flatRoutings = allRoutings.flat();
   const rolesInstance = buildRoles(options.roles);
   const hasMigrationDirsInRoutings = flatRoutings.some((r) => Array.isArray(r.migrationDirs));
+  await dropAllTables(db2);
   const theAPI = new TheAPI({
     ...options.theApiOptions,
     routings: allRoutings,

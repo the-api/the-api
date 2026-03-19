@@ -315,6 +315,21 @@ export function createRoutings(
   return new Routings(options);
 }
 
+async function dropAllTables(db: Knex): Promise<void> {
+  const tables = await db.raw(
+    `SELECT table_name, table_schema
+     FROM information_schema.tables
+     WHERE table_catalog = current_database()
+       AND (table_schema = current_schema() OR table_schema = 'public')`,
+  );
+  for (const { table_name, table_schema } of tables.rows) {
+    await db.raw(
+      `DROP TABLE IF EXISTS "${table_schema}"."${table_name}" CASCADE`,
+    );
+  }
+  await db.raw('DROP EXTENSION IF EXISTS pg_trgm');
+}
+
 /**
  * Главная точка входа для тестов.
  *
@@ -338,6 +353,8 @@ export async function testClient(
         (r as { migrationDirs?: unknown }).migrationDirs,
       ),
   );
+
+  await dropAllTables(db);
 
   // --- создаём и инициализируем API ---
   const theAPI = new TheAPI({
