@@ -396,13 +396,29 @@ export class TheAPI {
     c.set('objectToCheck', await db(tableName).where({ id }).first());
   }
 
+  private checkRoutePermissions(c: AppContext): void {
+    const roles = this.roles;
+    if (!roles) return;
+
+    const permissions = this.getMatchedEndpoints(c).map(
+      (endpoint) => roles.routePermissions[endpoint],
+    );
+
+    roles.checkAccess({
+      permissions,
+      user: c.var?.user,
+      objectToCheck: c.var?.objectToCheck,
+    });
+  }
+
   private registerRoutes(): void {
     const ownerLookupRoutes: Record<string, CrudOwnerLookupRoute> = {};
     const rolesRoute = new Routings();
     if (this.roles) {
       rolesRoute.use('*', async (c: AppContext, next: Next) => {
         await this.preloadCrudObjectToCheck(c, ownerLookupRoutes);
-        await this.roles?.rolesMiddleware(c as any, next);
+        this.checkRoutePermissions(c);
+        await next();
       });
       this.roles.routePermissions = {};
     }

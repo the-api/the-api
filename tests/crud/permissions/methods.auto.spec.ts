@@ -4,6 +4,7 @@ import { testClient } from '../../lib';
 const roles = {
   root: ['*'],
   admin: ['users.delete'],
+  owner: ['users.patch', 'users.delete'],
 };
 
 const { theAPI, client } = await testClient({
@@ -41,6 +42,24 @@ describe('auto protected methods', () => {
 
     const { result: adminDeleted } = await client.delete(`/users/${created.id}`, tokens.admin);
     expect(adminDeleted.ok).toEqual(true);
+  });
+
+  test('owner can PATCH and DELETE own record', async () => {
+    const { result: created } = await client.post(
+      '/users',
+      { name: 'owner-record', userId: client.users.noRole.userId as number },
+      tokens.root,
+    );
+
+    const patched = await client.patch(
+      `/users/${created.id}`,
+      { name: 'owner-record-updated' },
+      tokens.noRole,
+    );
+    expect(patched.result.name).toEqual('owner-record-updated');
+
+    const deleted = await client.delete(`/users/${created.id}`, tokens.noRole);
+    expect(deleted.result.ok).toEqual(true);
   });
 
   test('finalize', async () => {
