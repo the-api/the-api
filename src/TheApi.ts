@@ -268,11 +268,15 @@ export class TheAPI {
     });
   }
 
-  private inferCrudMethodsFromRoles(permissionPrefix: string): MethodsType[] {
+  private inferCrudMethodsFromRoles(
+    permissionPrefix: string,
+    tableName?: string,
+  ): MethodsType[] {
     if (!this.roles) return [];
 
     const mapping = this.roles.rolePermissionMapping;
     if (!mapping || typeof mapping !== 'object') return [];
+    const permissionPrefixes = new Set([permissionPrefix, tableName].filter(Boolean));
 
     const result = new Set<MethodsType>();
 
@@ -282,7 +286,7 @@ export class TheAPI {
       for (const permission of Object.keys(permissionMap)) {
         const [prefix, action, ...rest] = permission.split('.');
         if (rest.length || !prefix || !action) continue;
-        if (prefix !== permissionPrefix) continue;
+        if (!permissionPrefixes.has(prefix)) continue;
 
         const method = action.toUpperCase();
         if (method === '*') {
@@ -301,16 +305,19 @@ export class TheAPI {
 
   private addCrudRoutePermissions(
     routesPermissions: RoutesPermissionsMap,
-    { path, permissionPrefix }: CrudPermissionMeta,
+    { path, permissionPrefix, tableName }: CrudPermissionMeta,
     methods: MethodsType[],
   ): void {
     const register = (routePath: string, method: MethodsType): void => {
       const key = `${method} ${routePath}`;
-      const permission = `${permissionPrefix}.${method.toLowerCase()}`;
 
       if (!routesPermissions[key]) routesPermissions[key] = [];
-      if (!routesPermissions[key].includes(permission)) {
-        routesPermissions[key].push(permission);
+
+      for (const prefix of new Set([permissionPrefix, tableName].filter(Boolean))) {
+        const permission = `${prefix}.${method.toLowerCase()}`;
+        if (!routesPermissions[key].includes(permission)) {
+          routesPermissions[key].push(permission);
+        }
       }
     };
 
@@ -339,8 +346,10 @@ export class TheAPI {
     for (const method of methods) {
       if (method !== 'PATCH' && method !== 'DELETE') continue;
 
-      const permission = `${permissionPrefix}.${method.toLowerCase()}`;
-      if (!this.hasOwnerPermission(permission)) continue;
+      const hasOwnerPermission = [permissionPrefix, tableName]
+        .filter(Boolean)
+        .some((prefix) => this.hasOwnerPermission(`${prefix}.${method.toLowerCase()}`));
+      if (!hasOwnerPermission) continue;
 
       ownerLookupRoutes[`${method} ${path}/:id`] = {
         tableName,
@@ -390,7 +399,8 @@ export class TheAPI {
     if (typeof db !== 'function') return;
 
     const { tableName, idParamName } = ownerLookupRoutes[endpoint] as CrudOwnerLookupRoute;
-    const id = c.req.param(idParamName);
+    const id = c.req.param(idParamName)
+      || new URL(c.req.url).pathname.split('/').filter(Boolean).at(-1);
     if (id === undefined) return;
 
     c.set('objectToCheck', await db(tableName).where({ id }).first());
@@ -445,7 +455,10 @@ export class TheAPI {
             continue;
           }
 
-          const methods = this.inferCrudMethodsFromRoles(meta.permissionPrefix);
+          const methods = this.inferCrudMethodsFromRoles(
+            meta.permissionPrefix,
+            meta.tableName,
+          );
           this.addCrudRoutePermissions(routing.routesPermissions, meta, methods);
           this.addCrudOwnerLookupRoutes(ownerLookupRoutes, meta, methods);
         }

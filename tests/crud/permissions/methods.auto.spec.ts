@@ -7,17 +7,17 @@ const roles = {
   owner: ['users.patch', 'users.delete'],
 };
 
-const { theAPI, client } = await testClient({
-  routingOptions: { migrationDirs: ['./tests/migrations'] },
-  crudParams: [{
-    table: 'testTypes',
-    prefix: 'users',
-  }],
-  roles,
-});
-const { tokens } = client;
+describe('auto protected methods', async () => {
+  const { theAPI, client, db } = await testClient({
+    routingOptions: { migrationDirs: ['./tests/migrations'] },
+    crudParams: [{
+      table: 'testTypesUsers',
+      prefix: 'users',
+    }],
+    roles,
+  });
+  const { tokens } = client;
 
-describe('auto protected methods', () => {
   describe('init', () => {
     test('init', async () => {
       await theAPI.init();
@@ -35,9 +35,10 @@ describe('auto protected methods', () => {
   });
 
   test('DELETE /users/:id is protected automatically', async () => {
-    const { result: created } = await client.post('/users', { name: 'auto-method-2' }, tokens.noToken);
+    const { result: created } = await client.post('/users', { name: 'auto-method-2' }, tokens.registered);
 
-    const denied = await client.delete(`/users/${created.id}`, tokens.noToken);
+    const denied = await client.delete(`/users/${created.id}`);
+
     expect(denied.result.name).toEqual('ACCESS_DENIED');
 
     const { result: adminDeleted } = await client.delete(`/users/${created.id}`, tokens.admin);
@@ -48,7 +49,7 @@ describe('auto protected methods', () => {
     const { result: created } = await client.post(
       '/users',
       { name: 'owner-record', userId: client.users.noRole.userId as number },
-      tokens.root,
+      tokens.noRole,
     );
 
     const patched = await client.patch(

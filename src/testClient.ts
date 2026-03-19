@@ -105,13 +105,6 @@ export class TestClient {
       );
     }
     await db.raw('DROP EXTENSION IF EXISTS pg_trgm');
-    await db.raw(
-      'DROP FUNCTION IF EXISTS collections_time_deleted CASCADE',
-    );
-    await db.raw('DROP FUNCTION IF EXISTS maps_time_deleted CASCADE');
-    await db.raw(
-      'DROP FUNCTION IF EXISTS prefabs_time_deleted CASCADE',
-    );
   }
 
   async truncateTables(tables: string[] | string): Promise<void> {

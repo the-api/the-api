@@ -1,47 +1,47 @@
 import { expect, test, describe } from 'bun:test';
 import { testClient } from '../lib';
 
-const { client, theAPI, DateTime } = await testClient({
-  migrationDirs: ['./tests/migrations'],
-  crudParams: [
-    { table: 'testTypes' },
-    { table: 'testNews' },
-    {
-      table: 'testNews',
-      prefix: 'testAll',
-      join: [
-        {
-          table: 'testTypes',
-          where: '"testTypes".id = "testNews"."typeId"',
-          field: 'name',
-          alias: 'typeName',
-        },
-        {
-          table: 'testTypes',
-          where: '"testTypes".id = "testNews"."typeId"',
-        },
-      ],
-    },
-    {
-      table: 'testNews',
-      prefix: 'testAllOnDemand',
-      joinOnDemand: [
-        {
-          table: 'testTypes',
-          where: '"testTypes".id = "testNews"."typeId"',
-          field: 'name',
-          alias: 'typeName',
-        },
-        {
-          table: 'testTypes',
-          where: '"testTypes".id = "testNews"."typeId"',
-        },
-      ],
-    },
-  ],
-});
+describe('GET fields', async () => {
+  const { client, theAPI, DateTime } = await testClient({
+    migrationDirs: ['./tests/migrations'],
+    crudParams: [
+      { table: 'testTypes' },
+      { table: 'testNews' },
+      {
+        table: 'testNews',
+        prefix: 'testAll',
+        join: [
+          {
+            table: 'testTypes',
+            where: '"testTypes".id = "testNews"."typeId"',
+            field: 'name',
+            alias: 'typeName',
+          },
+          {
+            table: 'testTypes',
+            where: '"testTypes".id = "testNews"."typeId"',
+          },
+        ],
+      },
+      {
+        table: 'testNews',
+        prefix: 'testAllOnDemand',
+        joinOnDemand: [
+          {
+            table: 'testTypes',
+            where: '"testTypes".id = "testNews"."typeId"',
+            field: 'name',
+            alias: 'typeName',
+          },
+          {
+            table: 'testTypes',
+            where: '"testTypes".id = "testNews"."typeId"',
+          },
+        ],
+      },
+    ],
+  });
 
-describe('GET fields', () => {
   describe('init', () => {
     test('init', async () => {
       await theAPI.init();

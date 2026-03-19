@@ -6,6 +6,14 @@ exports.up = async (knex) => {
     });
   }
 
+  if (!(await knex.schema.hasTable('testTypesUsers'))) {
+    await knex.schema.createTable('testTypesUsers', (table) => {
+      table.increments('id');
+      table.string('name').notNullable();
+      table.integer('userId');
+    });
+  }
+
   if (!(await knex.schema.hasTable('testTypeAges'))) {
     await knex.schema.createTable('testTypeAges', (table) => {
       table.increments('id');
