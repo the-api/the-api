@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { serve } from "@hono/node-server";
+import { matchedRoutes } from 'hono/route';
 import { RegExpRouter } from 'hono/router/reg-exp-router';
 import { resolve } from 'path';
 import { Routings } from 'the-api-routings';
@@ -34,11 +35,19 @@ type CrudPermissionMeta = {
   path: string;
   permissionPrefix: string;
   methodsConfigured: boolean;
+  tableName: string;
 };
 
 type RoutingsWithCrudMeta = RoutingsType & {
   crudPermissionsMeta?: CrudPermissionMeta[];
 };
+
+type CrudOwnerLookupRoute = {
+  tableName: string;
+  idParamName: string;
+};
+
+type RoutesPermissionsMap = Record<string, string[]>;
 
 export class TheAPI {
   app: Hono<AppEnv>;
@@ -291,7 +300,7 @@ export class TheAPI {
   }
 
   private addCrudRoutePermissions(
-    routesPermissions: Record<string, string[]>,
+    routesPermissions: RoutesPermissionsMap,
     { path, permissionPrefix }: CrudPermissionMeta,
     methods: MethodsType[],
   ): void {
@@ -311,10 +320,90 @@ export class TheAPI {
     }
   }
 
+  private hasOwnerPermission(permission: string): boolean {
+    const roles = this.roles;
+    const ownerPermissions = roles?.rolePermissionMapping?.owner;
+    if (!roles || !ownerPermissions) return false;
+
+    return roles.checkWildcardPermissions({
+      key: permission,
+      permissions: ownerPermissions,
+    });
+  }
+
+  private addCrudOwnerLookupRoutes(
+    ownerLookupRoutes: Record<string, CrudOwnerLookupRoute>,
+    { path, permissionPrefix, tableName }: CrudPermissionMeta,
+    methods: MethodsType[],
+  ): void {
+    for (const method of methods) {
+      if (method !== 'PATCH' && method !== 'DELETE') continue;
+
+      const permission = `${permissionPrefix}.${method.toLowerCase()}`;
+      if (!this.hasOwnerPermission(permission)) continue;
+
+      ownerLookupRoutes[`${method} ${path}/:id`] = {
+        tableName,
+        idParamName: 'id',
+      };
+    }
+  }
+
+  private addConfiguredCrudOwnerLookupRoutes(
+    ownerLookupRoutes: Record<string, CrudOwnerLookupRoute>,
+    routesPermissions: RoutesPermissionsMap,
+    meta: CrudPermissionMeta,
+  ): void {
+    for (const method of ['PATCH', 'DELETE'] as MethodsType[]) {
+      const key = `${method} ${meta.path}/:id`;
+      if (!routesPermissions[key]) continue;
+
+      const permission = `${meta.permissionPrefix}.${method.toLowerCase()}`;
+      if (!this.hasOwnerPermission(permission)) continue;
+
+      ownerLookupRoutes[key] = {
+        tableName: meta.tableName,
+        idParamName: 'id',
+      };
+    }
+  }
+
+  private getMatchedEndpoints(c: AppContext): string[] {
+    return matchedRoutes(c)
+      .map((item) => item.path)
+      .filter((path) => path !== '/*')
+      .map((path) => `${c.req.method || 'GET'} ${path}`);
+  }
+
+  private async preloadCrudObjectToCheck(
+    c: AppContext,
+    ownerLookupRoutes: Record<string, CrudOwnerLookupRoute>,
+  ): Promise<void> {
+    const endpoint = this.getMatchedEndpoints(c).find((item) => ownerLookupRoutes[item]);
+    if (!endpoint) return;
+
+    const db = c.var.db as unknown as ((tableName: string) => {
+      where: (query: Record<string, unknown>) => {
+        first: () => Promise<Record<string, unknown> | undefined>;
+      };
+    });
+    if (typeof db !== 'function') return;
+
+    const { tableName, idParamName } = ownerLookupRoutes[endpoint] as CrudOwnerLookupRoute;
+    const id = c.req.param(idParamName);
+    if (id === undefined) return;
+
+    c.set('objectToCheck', await db(tableName).where({ id }).first());
+  }
+
   private registerRoutes(): void {
+    const ownerLookupRoutes: Record<string, CrudOwnerLookupRoute> = {};
     const rolesRoute = new Routings();
     if (this.roles) {
-      rolesRoute.use('*', this.roles.rolesMiddleware.bind(this.roles));
+      rolesRoute.use('*', async (c: AppContext, next: Next) => {
+        await this.preloadCrudObjectToCheck(c, ownerLookupRoutes);
+        await this.roles?.rolesMiddleware(c as any, next);
+      });
       this.roles.routePermissions = {};
     }
 
@@ -331,9 +420,18 @@ export class TheAPI {
     for (const routing of routesArr as RoutingsWithCrudMeta[]) {
       if (this.roles && Array.isArray(routing.crudPermissionsMeta)) {
         for (const meta of routing.crudPermissionsMeta) {
-          if (meta.methodsConfigured) continue;
+          if (meta.methodsConfigured) {
+            this.addConfiguredCrudOwnerLookupRoutes(
+              ownerLookupRoutes,
+              routing.routesPermissions,
+              meta,
+            );
+            continue;
+          }
+
           const methods = this.inferCrudMethodsFromRoles(meta.permissionPrefix);
           this.addCrudRoutePermissions(routing.routesPermissions, meta, methods);
+          this.addCrudOwnerLookupRoutes(ownerLookupRoutes, meta, methods);
         }
       }
 

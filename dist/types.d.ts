@@ -135,6 +135,7 @@ export type AppVariables = {
     relationsData: Record<string, unknown>;
     logId: string;
     user: Record<string, unknown>;
+    objectToCheck?: Record<string, unknown>;
     db: Knex;
     dbWrite: Knex;
     dbTables: DbTablesType;

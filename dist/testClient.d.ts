@@ -69,6 +69,7 @@ type TestClientResultType = {
     DateTime: typeof DateTime;
     tokens: TestClientTokensType;
     users: TestClientUsersType;
+    db: Knex;
 };
 export declare function getTestClient(options?: TestClientInitType): Promise<TestClient>;
 export declare function testClient(options?: TestClientOptionsType): Promise<TestClientResultType>;

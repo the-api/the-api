@@ -28,6 +28,11 @@ export declare class TheAPI {
     private registerDbMiddleware;
     private inferCrudMethodsFromRoles;
     private addCrudRoutePermissions;
+    private hasOwnerPermission;
+    private addCrudOwnerLookupRoutes;
+    private addConfiguredCrudOwnerLookupRoutes;
+    private getMatchedEndpoints;
+    private preloadCrudObjectToCheck;
     private registerRoutes;
 }
 //# sourceMappingURL=TheApi.d.ts.map
