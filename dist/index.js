@@ -42920,7 +42920,7 @@ var buildCrudValidationSchemaFromTable = (c, params) => {
   for (const [name, column] of columnEntries) {
     if (readOnly.includes(name))
       continue;
-    const required = column.is_nullable === "NO" && (column.column_default === null || typeof column.column_default === "undefined");
+    const required = name !== normalizedParams.userIdFieldName && column.is_nullable === "NO" && (column.column_default === null || typeof column.column_default === "undefined");
     bodyPost[name] = getColumnValidationRule(column, { required });
   }
   const bodyPatch = buildPatchFromPost(bodyPost);
@@ -44468,12 +44468,13 @@ class TheAPI {
       await n();
     });
   }
-  inferCrudMethodsFromRoles(permissionPrefix) {
+  inferCrudMethodsFromRoles(permissionPrefix, tableName) {
     if (!this.roles)
       return [];
     const mapping = this.roles.rolePermissionMapping;
     if (!mapping || typeof mapping !== "object")
       return [];
+    const permissionPrefixes = new Set([permissionPrefix, tableName].filter(Boolean));
     const result = new Set;
     for (const permissionMap of Object.values(mapping)) {
       if (!permissionMap || typeof permissionMap !== "object")
@@ -44482,7 +44483,7 @@ class TheAPI {
         const [prefix, action, ...rest] = permission.split(".");
         if (rest.length || !prefix || !action)
           continue;
-        if (prefix !== permissionPrefix)
+        if (!permissionPrefixes.has(prefix))
           continue;
         const method = action.toUpperCase();
         if (method === "*") {
@@ -44497,14 +44498,16 @@ class TheAPI {
     }
     return CRUD_METHODS.filter((method) => result.has(method));
   }
-  addCrudRoutePermissions(routesPermissions, { path, permissionPrefix }, methods) {
+  addCrudRoutePermissions(routesPermissions, { path, permissionPrefix, tableName }, methods) {
     const register = (routePath, method) => {
       const key = `${method} ${routePath}`;
-      const permission = `${permissionPrefix}.${method.toLowerCase()}`;
       if (!routesPermissions[key])
         routesPermissions[key] = [];
-      if (!routesPermissions[key].includes(permission)) {
-        routesPermissions[key].push(permission);
+      for (const prefix of new Set([permissionPrefix, tableName].filter(Boolean))) {
+        const permission = `${prefix}.${method.toLowerCase()}`;
+        if (!routesPermissions[key].includes(permission)) {
+          routesPermissions[key].push(permission);
+        }
       }
     };
     for (const method of methods) {
@@ -44528,8 +44531,8 @@ class TheAPI {
     for (const method of methods) {
       if (method !== "PATCH" && method !== "DELETE")
         continue;
-      const permission = `${permissionPrefix}.${method.toLowerCase()}`;
-      if (!this.hasOwnerPermission(permission))
+      const hasOwnerPermission = [permissionPrefix, tableName].filter(Boolean).some((prefix) => this.hasOwnerPermission(`${prefix}.${method.toLowerCase()}`));
+      if (!hasOwnerPermission)
         continue;
       ownerLookupRoutes[`${method} ${path}/:id`] = {
         tableName,
@@ -44562,10 +44565,21 @@ class TheAPI {
     if (typeof db !== "function")
       return;
     const { tableName, idParamName } = ownerLookupRoutes[endpoint];
-    const id = c.req.param(idParamName);
+    const id = c.req.param(idParamName) || new URL(c.req.url).pathname.split("/").filter(Boolean).at(-1);
     if (id === undefined)
       return;
     c.set("objectToCheck", await db(tableName).where({ id }).first());
+  }
+  checkRoutePermissions(c) {
+    const roles = this.roles;
+    if (!roles)
+      return;
+    const permissions = this.getMatchedEndpoints(c).map((endpoint) => roles.routePermissions[endpoint]);
+    roles.checkAccess({
+      permissions,
+      user: c.var?.user,
+      objectToCheck: c.var?.objectToCheck
+    });
   }
   registerRoutes() {
     const ownerLookupRoutes = {};
@@ -44573,7 +44587,8 @@ class TheAPI {
     if (this.roles) {
       rolesRoute.use("*", async (c, next) => {
         await this.preloadCrudObjectToCheck(c, ownerLookupRoutes);
-        await this.roles?.rolesMiddleware(c, next);
+        this.checkRoutePermissions(c);
+        await next();
       });
       this.roles.routePermissions = {};
     }
@@ -44592,7 +44607,7 @@ class TheAPI {
             this.addConfiguredCrudOwnerLookupRoutes(ownerLookupRoutes, routing.routesPermissions, meta);
             continue;
           }
-          const methods = this.inferCrudMethodsFromRoles(meta.permissionPrefix);
+          const methods = this.inferCrudMethodsFromRoles(meta.permissionPrefix, meta.tableName);
           this.addCrudRoutePermissions(routing.routesPermissions, meta, methods);
           this.addCrudOwnerLookupRoutes(ownerLookupRoutes, meta, methods);
         }
@@ -52315,9 +52330,6 @@ class TestClient {
       await db2.raw(`DROP TABLE IF EXISTS "${table_schema}"."${table_name}" CASCADE`);
     }
     await db2.raw("DROP EXTENSION IF EXISTS pg_trgm");
-    await db2.raw("DROP FUNCTION IF EXISTS collections_time_deleted CASCADE");
-    await db2.raw("DROP FUNCTION IF EXISTS maps_time_deleted CASCADE");
-    await db2.raw("DROP FUNCTION IF EXISTS prefabs_time_deleted CASCADE");
   }
   async truncateTables(tables) {
     for (const table of [].concat(tables)) {
@@ -53044,6 +53056,7 @@ var buildPatchFromPost2 = (post) => {
 };
 var buildCrudValidationSchemaFromTable2 = (c, params) => {
   const normalizedParams = normalizeCrudConfig2(params);
+  const userIdFieldName = normalizedParams.userIdFieldName || "userId";
   const columns = resolveTableColumns2(c, normalizedParams);
   const columnEntries = Object.entries(columns);
   const columnNames = columnEntries.map(([name2]) => name2);
@@ -53127,7 +53140,7 @@ var buildCrudValidationSchemaFromTable2 = (c, params) => {
   for (const [name2, column] of columnEntries) {
     if (readOnly.includes(name2))
       continue;
-    const required = column.is_nullable === "NO" && (column.column_default === null || typeof column.column_default === "undefined");
+    const required = name2 !== userIdFieldName && column.is_nullable === "NO" && (column.column_default === null || typeof column.column_default === "undefined");
     bodyPost[name2] = getColumnValidationRule2(column, { required });
   }
   const bodyPatch = buildPatchFromPost2(bodyPost);

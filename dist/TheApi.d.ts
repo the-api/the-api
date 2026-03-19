@@ -33,6 +33,7 @@ export declare class TheAPI {
     private addConfiguredCrudOwnerLookupRoutes;
     private getMatchedEndpoints;
     private preloadCrudObjectToCheck;
+    private checkRoutePermissions;
     private registerRoutes;
 }
 //# sourceMappingURL=TheApi.d.ts.map
