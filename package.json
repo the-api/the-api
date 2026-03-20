@@ -1,6 +1,6 @@
 {
   "name": "the-api",
-  "version": "22.10.1",
+  "version": "22.10.2",
   "license": "MIT",
   "author": "Dimitry Ivanov <2@ivanoff.org.ua> # curl -A cv ivanoff.org.ua",
   "description": "The API - Create Your API in Seconds",
@@ -23,7 +23,7 @@
     "pg": "^8.19.0",
     "sharp": "^0.34.5",
     "the-api-roles": "^1.1.2",
-    "the-api-routings": "^0.7.1"
+    "the-api-routings": "^0.8.1"
   },
   "devDependencies": {
     "@types/bun": "^1.3.9",

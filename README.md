@@ -37,6 +37,7 @@
       - [Status middleware](#status-middleware)
   - [Routes](#routes)
     - [Using Routings](#using-routings)
+    - [Prefix route groups](#prefix-route-groups)
     - [Get route](#get-route)
     - [Post route](#post-route)
     - [Patch route](#patch-route)
@@ -979,6 +980,53 @@ const route2 = new Routings();
 const theAPI = new TheAPI({
   routings: [route1, [middlewares.common, route2]],
 });
+```
+
+### Prefix route groups
+
+Use `prefix()` when you want to register several routes under the same base path:
+
+```typescript
+const router = new Routings();
+
+router
+  .prefix('/ships')
+  .get('/:id/similar', getSimilarShips)
+  .get('/:id/requests', getRequests)
+  .post('/import', importShip)
+  .post('/0', parseShip)
+  .post('/0/countries', guessCountryByName);
+```
+
+This is equivalent to:
+
+```typescript
+router.get('/ships/:id/similar', getSimilarShips);
+router.get('/ships/:id/requests', getRequests);
+router.post('/ships/import', importShip);
+router.post('/ships/0', parseShip);
+router.post('/ships/0/countries', guessCountryByName);
+```
+
+Calling `prefix()` again switches the current base path:
+
+```typescript
+router
+  .prefix('/v1')
+  .get('/users', getUsersV1)
+  .prefix('/v2')
+  .get('/users', getUsersV2);
+```
+
+The current prefix also applies to `router.crud(...)`:
+
+```typescript
+router.prefix('/api/v1').crud({ table: 'messages' });
+// GET    /api/v1/messages
+// POST   /api/v1/messages
+// GET    /api/v1/messages/:id
+// PATCH  /api/v1/messages/:id
+// DELETE /api/v1/messages/:id
 ```
 
 ### Get route
