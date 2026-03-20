@@ -4,26 +4,14 @@ import { randomUUID } from 'crypto';
 import type { Next } from 'hono';
 import type { AppContext, QueryParamValue, RoutesErrorType } from '../types';
 import { getErrorNameAndAdditional } from '../errorHelpers';
+import {
+  appendQueryParams,
+  getNormalizedQuery,
+  parseRequestBody,
+} from '../requestState';
 
 const { JWT_SECRET } = process.env;
 const secret = JWT_SECRET || randomUUID();
-
-const setSearchParamValue = (
-  searchParams: URLSearchParams,
-  key: string,
-  value: QueryParamValue,
-): void => {
-  searchParams.delete(key);
-
-  if (value == null) return;
-
-  if (Array.isArray(value)) {
-    for (const item of value) searchParams.append(key, String(item));
-    return;
-  }
-
-  searchParams.set(key, String(value));
-};
 
 const beginMiddleware = async (c: AppContext, next: Next) => {
   const dateBegin = new Date();
@@ -39,15 +27,23 @@ const beginMiddleware = async (c: AppContext, next: Next) => {
     c.set('result', { error: true, ...errObj, name, additional });
     if (errObj?.status) c.status(errObj.status as any);
   });
-  c.set('setQueryParams', (params: Record<string, QueryParamValue>) => {
-    const url = new URL(c.req.url);
+  const syncQuery = (params?: Record<string, QueryParamValue>): void => {
+    const query = params
+      ? appendQueryParams(c, params)
+      : getNormalizedQuery(c);
+    c.set('query', query);
+  };
+  const appendQueryParamsHandler = (
+    params: Record<string, QueryParamValue>,
+  ): void => {
+    syncQuery(params);
+  };
+  c.set('appendQueryParams', appendQueryParamsHandler);
+  syncQuery();
 
-    for (const [key, value] of Object.entries(params)) {
-      setSearchParamValue(url.searchParams, key, value);
-    }
-
-    c.req.raw = new Request(url.toString(), c.req.raw);
-  });
+  const { body, bodyType } = await parseRequestBody(c);
+  c.set('body', body);
+  c.set('bodyType', bodyType);
 
   // -- JWT --
   const token = c.req.raw.headers

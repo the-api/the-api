@@ -8,7 +8,7 @@ router.get('/cors', async (c) => {
 });
 
 router.post('/cors', async (c) => {
-  c.set('result', await c.req.json());
+  c.set('result', c.var.body);
 });
 
 const { theAPI } = await testClient({

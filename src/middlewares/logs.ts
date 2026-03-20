@@ -37,18 +37,18 @@ const createLogger =
     }
   };
 
-const getBodyForLogs = async (c: AppContext): Promise<unknown> => {
+const getBodyForLogs = (c: AppContext): unknown => {
   const contentType = c.req.raw.headers.get('content-type') || '';
-
-  if (contentType.startsWith('application/json')) {
-    return c.req.json();
-  }
 
   if (contentType.startsWith('multipart/form-data')) {
     return '[multipart form-data omitted]';
   }
 
-  return c.req.text();
+  if (c.var.bodyType === 'arrayBuffer') {
+    return `[${(c.var.body as ArrayBuffer)?.byteLength || 0} bytes]`;
+  }
+
+  return c.var.body;
 };
 
 const logMiddleware = async (c: AppContext, n: Next) => {
@@ -61,8 +61,8 @@ const logMiddleware = async (c: AppContext, n: Next) => {
   c.set('log', createLogger({ id, startTime, method, path }));
 
   const ip = c.env?.ip?.address;
-  const query = c.req.query();
-  const body = await getBodyForLogs(c);
+  const query = { ...c.var.query };
+  const body = getBodyForLogs(c);
 
   hideObjectValues(query);
   hideObjectValues(body);

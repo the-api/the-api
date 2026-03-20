@@ -5,7 +5,7 @@ import type { AppContext, Next } from '../src';
 const router = createRoutings({});
 
 router.get('/query', async (c: AppContext, next: Next) => {
-  c.var.setQueryParams({
+  c.var.appendQueryParams({
     userId: c.var.user.userId as number,
     modified: true,
     tags: ['api', 'docs'],
@@ -15,13 +15,13 @@ router.get('/query', async (c: AppContext, next: Next) => {
 });
 
 router.get('/query', async (c: AppContext) => {
-  c.set('result', c.req.queries());
+  c.set('result', c.var.query);
 });
 
 const { client, theAPI } = await testClient({ routings: [router] });
 
-describe('setQueryParams', () => {
-  test('updates query params for next handlers', async () => {
+describe('appendQueryParams', () => {
+  test('updates normalized query params for next handlers', async () => {
     const token = client.tokens.admin;
     const res = await theAPI.app.fetch(new Request(
       'http://localhost:7788/query?userId=1&removeMe=1',
@@ -35,9 +35,9 @@ describe('setQueryParams', () => {
     const data = await res.json();
 
     expect(data.result).toEqual({
-      modified: ['true'],
+      modified: 'true',
       tags: ['api', 'docs'],
-      userId: ['2'],
+      userId: '2',
     });
   });
 });

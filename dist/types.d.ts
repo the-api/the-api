@@ -121,6 +121,11 @@ export type AppBindings = {
     ip: SocketAddress | null;
 };
 export type QueryParamValue = string | number | boolean | null | undefined | Array<string | number | boolean>;
+export type NormalizedQueryValue = string | string[];
+export type NormalizedQueryType = Record<string, NormalizedQueryValue>;
+export type FormBodyValue = string | File | Array<string | File>;
+export type FormBodyType = Record<string, FormBodyValue>;
+export type RequestBodyType = 'empty' | 'json' | 'form' | 'text' | 'arrayBuffer';
 export type AppVariables = {
     log: (...args: unknown[]) => void;
     error: (err: Error | {
@@ -128,7 +133,10 @@ export type AppVariables = {
     }) => void;
     getErrorByMessage: (message: string) => RoutesErrorType | undefined;
     getTemplateByName: (name: string) => EmailTemplatesType;
-    setQueryParams: (params: Record<string, QueryParamValue>) => void;
+    appendQueryParams: (params: Record<string, QueryParamValue>) => void;
+    body: unknown;
+    bodyType: RequestBodyType;
+    query: NormalizedQueryType;
     result: unknown;
     meta: Record<string, unknown>;
     relations: Record<string, unknown>;

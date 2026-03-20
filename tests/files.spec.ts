@@ -12,26 +12,26 @@ const uploadsFolder = path.join('/tmp', 'the-api-files-spec');
 
 const router = createRoutings();
 router.post('/upload', async (c: AppContext) => {
-  const body = await c.req.parseBody();
+  const body = c.var.body as Record<string, unknown>;
   const result = await c.var.files.upload(body.file as File, 'uploads');
   c.set('result', result);
 });
 
 router.post('/upload_files', async (c: AppContext) => {
-  const body = await c.req.parseBody();
-  const file = body['files[]'] as File;
-  const result = await c.var.files.upload(file, 'uploads');
+  const body = c.var.body as Record<string, unknown>;
+  const files = c.var.files.getBodyFiles(body, { fields: ['files[]'] });
+  const result = await c.var.files.upload(files, 'uploads');
   c.set('result', result);
 });
 
 router.post('/upload_image', async (c: AppContext) => {
-  const body = await c.req.parseBody();
+  const body = c.var.body as Record<string, unknown>;
   const result = await c.var.files.upload(body.file as File, 'image-uploads');
   c.set('result', result);
 });
 
 router.post('/upload_many_images', async (c: AppContext) => {
-  const body = await c.req.parseBody({ all: true });
+  const body = c.var.body as Record<string, unknown>;
   const filesFromBody = c.var.files.getBodyFiles(body, {
     fields: ['file', 'file[]'],
     imagesOnly: true,
@@ -45,6 +45,7 @@ router.post('/upload_many_images', async (c: AppContext) => {
   });
   const firstUpload = uploads[0];
   c.set('result', {
+    bodyType: c.var.bodyType,
     filesFromBody: filesFromBody.map((file) => file.name),
     imageSizes: c.var.files.getImageSizes(),
     uploads,
@@ -198,6 +199,7 @@ describe('files', () => {
       });
       const json = await response.json();
       const result = json.result as {
+        bodyType: string;
         filesFromBody: string[];
         imageSizes: Array<{ name: string }>;
         uploads: Array<{ name: string }>;
@@ -206,6 +208,7 @@ describe('files', () => {
         firstUploadDir: string;
       };
 
+      expect(result.bodyType).toEqual('form');
       expect(result.filesFromBody).toEqual(['one.png', 'two.png']);
       expect(result.imageSizes.map(({ name }) => name)).toEqual(['small', 'medium']);
       expect(result.uploads).toHaveLength(2);

@@ -4,8 +4,7 @@ import { bodyLimit } from '../src';
 
 const router = createRoutings();
 router.post('/body-limit', async (c) => {
-  await c.req.text();
-  c.set('result', { ok: true });
+  c.set('result', { body: c.var.body, bodyType: c.var.bodyType, ok: true });
 });
 
 const { theAPI } = await testClient({
@@ -50,6 +49,6 @@ describe('bodyLimit', () => {
     const body = await res.json();
 
     expect(res.status).toEqual(200);
-    expect(body.result).toEqual({ ok: true });
+    expect(body.result).toEqual({ body: '12345', bodyType: 'text', ok: true });
   });
 });

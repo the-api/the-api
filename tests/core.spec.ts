@@ -1,24 +1,25 @@
 import { describe, expect, test } from 'bun:test';
 import { createRoutings, testClient } from './lib';
-import type { Context, Next } from 'hono';
+import type { Next } from 'hono';
+import type { AppContext } from '../src';
 
 const router = createRoutings({});
 
-router.get('/', async (c: Context, n: Next) => {
+router.get('/', async (c: AppContext, n: Next) => {
   await n();
   c.set('result', {...c.var.result, e11: 'Hi11'});
 });
 
-router.get('/', async (c: Context) => {
+router.get('/', async (c: AppContext) => {
   c.set('result', {e22: 'Hi22'});
 });
 
-router.post('/post/:id', async (c: Context) => {
-  const body = await c.req.json();
+router.post('/post/:id', async (c: AppContext) => {
+  const body = c.var.body as Record<string, unknown>;
   c.set('result', {...c.req.param(), ...body});
 });
 
-router.get('/search/:search', async (c: Context) => {
+router.get('/search/:search', async (c: AppContext) => {
   c.set('result', c.req.param());
 });
 

@@ -174,7 +174,7 @@ import { status } from '../extensions';
 const router = new Routings();
 
 router.post('/data/:id', async (c: Context) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.var.log('incoming data', body);
 
   c.set('result', {...c.req.param(), token: 'xxx', refresh: 'yyy'});
@@ -270,28 +270,28 @@ export default theAPI.up();
 ### Post route
 
 router.post('/post', async (c: Context) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.set('result', body);
 });
 
 ### Patch route
 
 router.patch('/patch/:id', async (c: Context) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.set('result', {...c.req.param(), ...body});
 });
 
 ### Put route
 
 router.put('/put/:id', async (c: Context) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.set('result', {...c.req.param(), ...body});
 });
 
 ### Delete route
 
 router.delete('/patch/:id', async (c: Context) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.set('result', body);
 });
 
@@ -303,7 +303,7 @@ import { logs } from '../extensions';
 const router = new Routings();
 
 router.post('/data/:id', async (c: Context) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.var.log('incoming data', body);
 
   c.set('result', {...c.req.param(), token: 'xxx', refresh: 'yyy'});
@@ -1571,11 +1571,8 @@ const logMiddleware = async (c: AppContext, n: Next) => {
   c.set('log', createLogger({ id, startTime, method, path }));
 
   const ip = c.env?.ip?.address;
-  const query = c.req.query();
-  const body =
-    headers.get('content-type') === 'application/json'
-      ? await c.req.json()
-      : await c.req.text();
+  const query = { ...c.var.query };
+  const body = c.var.body;
 
   hideObjectValues(query);
   hideObjectValues(body);
@@ -2227,7 +2224,7 @@ router.get('/', async (c: AppContext) => {
 });
 
 router.post('/post/:id', async (c: AppContext) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.set('result', {...c.req.param(), ...body});
 });
 
@@ -2282,7 +2279,7 @@ router.get('/', async (c: Context) => {
 });
 
 router.post('/post/:id', async (c: Context) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.set('result', {...c.req.param(), ...body});
 });
 
@@ -4883,13 +4880,13 @@ import type { AppContext } from '../src';
 const router = new Routings();
 
 router.post('/upload', async (c: AppContext) => {
-  const body = await c.req.parseBody();
+  const body = c.var.body as Record<string, unknown>;
   const result = await c.var.files.upload(body.file as File, 'uploads');
   c.set('result', result);
 });
 
 router.post('/upload_files', async (c: AppContext) => {
-  const body = await c.req.parseBody();
+  const body = c.var.body as Record<string, unknown>;
   const file = body['files[]'] as File;
   const result = await c.var.files.upload(file, 'uploads');
   c.set('result', result);
@@ -5294,4 +5291,3 @@ export type TestLibParamsType = {
 
 export type { Hono };
 ```
-

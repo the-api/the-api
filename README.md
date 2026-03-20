@@ -277,7 +277,7 @@ router.crud({ table: 'messages' });
 const routerOverride = new Routings();
 
 routerOverride.get('/messages', async (c, next) => {
-  c.var.setQueryParams({ userId: c.var.user.userId });
+  c.var.appendQueryParams({ userId: c.var.user.userId });
   await next();
 });
 
@@ -286,7 +286,7 @@ export default [routerOverride, router];
 
 #### Query params helper
 
-If you only need to update request query params before the next handler, use `c.var.setQueryParams(...)`:
+If you only need to update request query params before the next handler, use `c.var.appendQueryParams(...)`:
 
 ```typescript
 import { Routings } from 'the-api';
@@ -294,7 +294,7 @@ import { Routings } from 'the-api';
 const router = new Routings();
 
 router.get('/messages', async (c, next) => {
-  c.var.setQueryParams({
+  c.var.appendQueryParams({
     userId: c.var.user.userId,
     modified: true,
   });
@@ -303,7 +303,33 @@ router.get('/messages', async (c, next) => {
 });
 ```
 
-`setQueryParams` recreates `c.req.raw` with updated search params, so the next handler can read them with `c.req.query()` / `c.req.queries()`. Existing values are overwritten, arrays are written as repeated query params, and `null` / `undefined` remove the param.
+`appendQueryParams` merges new params into the current URL query, updates `c.req.raw`, and refreshes `c.var.query`.
+Existing keys are overwritten, arrays are written as repeated query params, and `null` / `undefined` remove the param.
+
+#### Request state helpers
+
+Each request now gets normalized request data in `c.var`:
+
+- `c.var.query`: normalized query object. Single values stay strings, repeated params become arrays.
+- `c.var.body`: request body parsed exactly once by `Content-Type`.
+- `c.var.bodyType`: one of `empty`, `json`, `form`, `text`, `arrayBuffer`.
+
+`c.var.body` rules:
+
+- `application/json` -> parsed JSON
+- `multipart/form-data` / `application/x-www-form-urlencoded` -> object built from `formData()`
+- `text/*` -> string
+- any other non-empty body -> `ArrayBuffer`
+
+Form bodies keep strings and `File` values. Repeated fields become arrays, and fields ending with `[]` are also stored as arrays.
+
+If body parsing fails, `the-api` logs `[body parse error]` and continues:
+
+- `json` / `form` -> `{}`
+- `text` -> `''`
+- `arrayBuffer` -> empty `ArrayBuffer`
+
+So malformed body does not automatically throw in the global request parser. If you replace `c.req` or `c.req.raw` manually inside a handler, also update `c.var.body`, `c.var.bodyType`, and/or `c.var.query` yourself.
 
 ### Validation example
 
@@ -990,21 +1016,21 @@ export default theAPI.up();
 ### Post route
 
 router.post('/post', async (c: Context) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.set('result', body);
 });
 
 ### Patch route
 
 router.patch('/patch/:id', async (c: Context) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.set('result', {...c.req.param(), ...body});
 });
 
 ### Delete route
 
 router.delete('/patch/:id', async (c: Context) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.set('result', body);
 });
 
@@ -1023,7 +1049,7 @@ import { Routings, TheAPI, middlewares } from 'the-api';
 const router = new Routings();
 
 router.post('/upload', async (c) => {
-  const body = await c.req.parseBody();
+  const body = c.var.body as Record<string, unknown>;
   const result = await c.var.files.upload(body.file as File, 'uploads');
   c.set('result', result);
 });
@@ -1078,7 +1104,7 @@ Example for image-only upload from multipart body:
 
 ```typescript
 router.post('/upload-images', async (c) => {
-  const body = await c.req.parseBody({ all: true });
+  const body = c.var.body as Record<string, unknown>;
   const files = c.var.files.getBodyFiles(body, {
     fields: ['file', 'file[]'],
     imagesOnly: true,
@@ -1092,7 +1118,7 @@ Or shorter:
 
 ```typescript
 router.post('/upload-images', async (c) => {
-  const body = await c.req.parseBody({ all: true });
+  const body = c.var.body as Record<string, unknown>;
   const result = await c.var.files.uploadBody(body, 'images', {
     fields: ['file', 'file[]'],
     imagesOnly: true,

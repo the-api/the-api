@@ -169,15 +169,30 @@ export type QueryParamValue =
   | undefined
   | Array<string | number | boolean>;
 
+export type NormalizedQueryValue = string | string[];
+export type NormalizedQueryType = Record<string, NormalizedQueryValue>;
+
+export type FormBodyValue =
+  | string
+  | File
+  | Array<string | File>;
+
+export type FormBodyType = Record<string, FormBodyValue>;
+
+export type RequestBodyType = 'empty' | 'json' | 'form' | 'text' | 'arrayBuffer';
+
 export type AppVariables = {
   // -- core (set by default middleware) --
   log: (...args: unknown[]) => void;
   error: (err: Error | { message: string }) => void;
   getErrorByMessage: (message: string) => RoutesErrorType | undefined;
   getTemplateByName: (name: string) => EmailTemplatesType;
-  setQueryParams: (params: Record<string, QueryParamValue>) => void;
+  appendQueryParams: (params: Record<string, QueryParamValue>) => void;
 
   // -- request state --
+  body: unknown;
+  bodyType: RequestBodyType;
+  query: NormalizedQueryType;
   result: unknown;
   meta: Record<string, unknown>;
   relations: Record<string, unknown>;

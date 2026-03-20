@@ -852,15 +852,11 @@ const resolveRuntimeSection = async (
 };
 
 const getQueryData = (c: AppContext): Record<string, unknown> => {
-  const raw = c.req.queries();
-  return Object.entries(raw).reduce((acc: Record<string, unknown>, [key, values]) => {
-    if (!Array.isArray(values) || !values.length) {
-      acc[key] = undefined;
-      return acc;
-    }
-    acc[key] = values.length === 1 ? values[0] : values;
-    return acc;
-  }, {});
+  if (c.var.query && typeof c.var.query === 'object') {
+    return { ...c.var.query } as Record<string, unknown>;
+  }
+
+  return {};
 };
 
 const getHeaderData = (c: AppContext): Record<string, unknown> => {
@@ -905,10 +901,8 @@ const validateActionSections = async (
 
     bodyLoaded = true;
 
-    try {
-      bodyData = await c.req.json();
-      if (!bodyData || typeof bodyData !== 'object') bodyData = {};
-    } catch {
+    bodyData = c.var.body;
+    if (!bodyData || typeof bodyData !== 'object') {
       bodyData = {};
     }
 

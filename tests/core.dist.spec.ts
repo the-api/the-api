@@ -15,7 +15,7 @@ router.get('/', async (c: AppContext) => {
 });
 
 router.post('/post/:id', async (c: AppContext) => {
-  const body = await c.req.json();
+  const body = c.var.body as Record<string, unknown>;
   c.set('result', {...c.req.param(), ...body});
 });
 
