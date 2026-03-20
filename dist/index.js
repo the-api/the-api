@@ -52424,9 +52424,10 @@ class TestClient {
   getValue(key) {
     return this.vars[key];
   }
-  async readFile(filePath) {
+  async readFile(relativePath, type) {
+    const filePath = path3.join(process.cwd(), relativePath);
     const buf = await fs4.readFile(filePath);
-    return new File([buf], path3.basename(filePath));
+    return new File([buf], path3.basename(filePath), type && { type });
   }
 }
 function createRoutings(options) {
@@ -52564,8 +52565,8 @@ status.get("/status", async (c) => c.set("result", { ok: 1 }));
 
 // src/middlewares/info.ts
 import { readFileSync } from "fs";
-import { join as join2 } from "path";
-var packageJson = JSON.parse(readFileSync(join2(process.cwd(), "./package.json"), "utf-8"));
+import { join as join3 } from "path";
+var packageJson = JSON.parse(readFileSync(join3(process.cwd(), "./package.json"), "utf-8"));
 var { name, version } = packageJson;
 var startTime = new Date;
 var totalRequests = 0;

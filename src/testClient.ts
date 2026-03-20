@@ -294,9 +294,10 @@ export class TestClient {
     return this.vars[key];
   }
 
-  async readFile(filePath: string): Promise<File> {
+  async readFile(relativePath: string, type?: string): Promise<File> {
+    const filePath = path.join(process.cwd(), relativePath);
     const buf = await fs.readFile(filePath);
-    return new File([buf], path.basename(filePath));
+    return new File([buf], path.basename(filePath), type && { type });
   }
 }
 

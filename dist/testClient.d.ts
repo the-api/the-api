@@ -62,7 +62,7 @@ export declare class TestClient {
     generateGWT(params: Record<string, unknown>, expiresIn?: string): string;
     storeValue(key: string, value: unknown): void;
     getValue(key: string): unknown;
-    readFile(filePath: string): Promise<File>;
+    readFile(relativePath: string, type?: string): Promise<File>;
 }
 export declare function createRoutings(options?: {
     migrationDirs?: string[];
