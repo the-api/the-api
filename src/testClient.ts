@@ -41,7 +41,6 @@ export type TestClientRolesConfigType = Record<string, string[]>;
 
 export type TestClientOptionsType = {
   migrationDirs?: string[];
-  routingOptions?: { migrationDirs?: string[] };
   crudParams?: CrudBuilderOptionsType[];
   roles?: Roles | TestClientRolesConfigType;
   routings?: RoutingsInputType;
@@ -123,7 +122,6 @@ function buildRoutings(options: TestClientOptionsType): RoutingsInputType {
   const {
     crudParams = [],
     migrationDirs,
-    routingOptions,
     routings = [],
     newRoutings,
   } = options;
@@ -132,12 +130,9 @@ function buildRoutings(options: TestClientOptionsType): RoutingsInputType {
 
   if (
     crudParams.length ||
-    migrationDirs?.length ||
-    routingOptions?.migrationDirs?.length
+    migrationDirs?.length
   ) {
-    const crudRouting = new Routings({
-      migrationDirs: routingOptions?.migrationDirs || migrationDirs,
-    });
+    const crudRouting = new Routings({ migrationDirs });
     for (const params of crudParams) {
       crudRouting.crud(params);
     }
@@ -145,9 +140,7 @@ function buildRoutings(options: TestClientOptionsType): RoutingsInputType {
   }
 
   if (newRoutings) {
-    const customRouting = new Routings({
-      migrationDirs: routingOptions?.migrationDirs || migrationDirs,
-    });
+    const customRouting = new Routings({ migrationDirs });
     newRoutings(customRouting);
     result.push(customRouting);
   }

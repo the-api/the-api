@@ -9,7 +9,7 @@ const roles = {
 
 describe('auto protected methods', async () => {
   const { client } = await testClient({
-    routingOptions: { migrationDirs: ['./tests/migrations'] },
+    migrationDirs: ['./tests/migrations'],
     crudParams: [{
       table: 'testTypesUsers',
       prefix: 'users',

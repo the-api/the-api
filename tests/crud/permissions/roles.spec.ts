@@ -15,7 +15,7 @@ const roles = new Roles({
 });
 
 const { client } = await testClient({
-  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  migrationDirs: ['./tests/migrations'],
   crudParams: [{
     table: 'testNews',
 

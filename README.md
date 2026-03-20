@@ -41,6 +41,7 @@
     - [Post route](#post-route)
     - [Patch route](#patch-route)
     - [Delete route](#delete-route)
+  - [Files](#files)
   - [TestClient For Integration Tests](#testclient-for-integration-tests)
 
 ## Examples
@@ -1146,7 +1147,6 @@ import { createRoutings, testClient } from 'the-api';
 Parameters of `testClient(options?)`:
 
 - `migrationDirs?: string[]` - migration folders used by internal routings created inside `testClient`
-- `routingOptions?: { migrationDirs?: string[] }` - explicit routing options for internal routings (`crudParams` and `newRoutings`)
 - `crudParams?: CrudBuilderOptionsType[]` - list of `router.crud(...)` configs that will be registered automatically
 - `roles?: Roles | Record<string, string[]>` - roles instance or roles map (map is converted to `new Roles(...)` internally)
 - `routings?: RoutingsInputType` - extra routings/middlewares you already created; nested arrays are supported

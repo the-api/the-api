@@ -3,7 +3,7 @@ import { testClient } from './lib';
 import { langs } from 'the-api-langs';
 
 const { client } = await testClient({
-  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  migrationDirs: ['./tests/migrations'],
   routings: [langs],
   crudParams: [
     { table: 'langs' },

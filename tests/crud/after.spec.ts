@@ -2,7 +2,7 @@ import { expect, test, describe, beforeAll } from 'bun:test';
 import { testClient } from '../lib';
 
 const { client, DateTime } = await testClient({
-  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  migrationDirs: ['./tests/migrations'],
   crudParams: [
     { table: 'testTypes' },
     { table: 'testNews' },

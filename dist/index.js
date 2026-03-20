@@ -52316,24 +52316,19 @@ function buildRoutings(options) {
   const {
     crudParams = [],
     migrationDirs,
-    routingOptions,
     routings = [],
     newRoutings
   } = options;
   const result = [...routings];
-  if (crudParams.length || migrationDirs?.length || routingOptions?.migrationDirs?.length) {
-    const crudRouting = new Routings({
-      migrationDirs: routingOptions?.migrationDirs || migrationDirs
-    });
+  if (crudParams.length || migrationDirs?.length) {
+    const crudRouting = new Routings({ migrationDirs });
     for (const params of crudParams) {
       crudRouting.crud(params);
     }
     result.push(crudRouting);
   }
   if (newRoutings) {
-    const customRouting = new Routings({
-      migrationDirs: routingOptions?.migrationDirs || migrationDirs
-    });
+    const customRouting = new Routings({ migrationDirs });
     newRoutings(customRouting);
     result.push(customRouting);
   }

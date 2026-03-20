@@ -3,7 +3,7 @@ import { DateTime } from'luxon';
 import { testClient } from '../lib';
 
 const { client } = await testClient({
-  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  migrationDirs: ['./tests/migrations'],
   crudParams: [
     { table: 'testTypes' },
     { table: 'testNews' },

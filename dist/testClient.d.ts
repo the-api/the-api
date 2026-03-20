@@ -22,9 +22,6 @@ export type TestClientTokensType = Record<string, string>;
 export type TestClientRolesConfigType = Record<string, string[]>;
 export type TestClientOptionsType = {
     migrationDirs?: string[];
-    routingOptions?: {
-        migrationDirs?: string[];
-    };
     crudParams?: CrudBuilderOptionsType[];
     roles?: Roles | TestClientRolesConfigType;
     routings?: RoutingsInputType;

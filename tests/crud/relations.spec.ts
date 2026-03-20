@@ -3,7 +3,7 @@ import { testClient } from '../lib';
 import {type  CrudBuilderOptionsType } from '../../src';
 
 const { theAPI, client } = await testClient({
-  routingOptions: { migrationDirs: ['./tests/migrations'] },
+  migrationDirs: ['./tests/migrations'],
   crudParams: (() => {
     const typeDefinition: CrudBuilderOptionsType = { table: 'testTypes' };
     return [
