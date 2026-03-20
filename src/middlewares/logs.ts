@@ -37,6 +37,20 @@ const createLogger =
     }
   };
 
+const getBodyForLogs = async (c: AppContext): Promise<unknown> => {
+  const contentType = c.req.raw.headers.get('content-type') || '';
+
+  if (contentType.startsWith('application/json')) {
+    return c.req.json();
+  }
+
+  if (contentType.startsWith('multipart/form-data')) {
+    return '[multipart form-data omitted]';
+  }
+
+  return c.req.text();
+};
+
 const logMiddleware = async (c: AppContext, n: Next) => {
   const startTime = new Date();
   const { method, headers } = c.req.raw;
@@ -48,10 +62,7 @@ const logMiddleware = async (c: AppContext, n: Next) => {
 
   const ip = c.env?.ip?.address;
   const query = c.req.query();
-  const body =
-    headers.get('content-type') === 'application/json'
-      ? await c.req.json()
-      : await c.req.text();
+  const body = await getBodyForLogs(c);
 
   hideObjectValues(query);
   hideObjectValues(body);

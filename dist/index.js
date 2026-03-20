@@ -52504,6 +52504,16 @@ var createLogger = ({
     console.log(`[${date.toISOString()}] [${id}] [${method}] [${path4}] [${ms}] ${data}`);
   }
 };
+var getBodyForLogs = async (c) => {
+  const contentType = c.req.raw.headers.get("content-type") || "";
+  if (contentType.startsWith("application/json")) {
+    return c.req.json();
+  }
+  if (contentType.startsWith("multipart/form-data")) {
+    return "[multipart form-data omitted]";
+  }
+  return c.req.text();
+};
 var logMiddleware = async (c, n) => {
   const startTime = new Date;
   const { method, headers } = c.req.raw;
@@ -52513,7 +52523,7 @@ var logMiddleware = async (c, n) => {
   c.set("log", createLogger({ id, startTime, method, path: path4 }));
   const ip = c.env?.ip?.address;
   const query = c.req.query();
-  const body = headers.get("content-type") === "application/json" ? await c.req.json() : await c.req.text();
+  const body = await getBodyForLogs(c);
   hideObjectValues(query);
   hideObjectValues(body);
   c.var.log("[begin]", { headers, query, body, ip, method, path: path4 });

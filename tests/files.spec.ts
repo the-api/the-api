@@ -71,7 +71,7 @@ router.delete('/upload_image_body/:name', async (c: AppContext) => {
 });
 
 const { theAPI, client } = await testClient({
-  routings: [middlewares.createFiles({ folder: uploadsFolder }), router],
+  routings: [middlewares.logs, middlewares.createFiles({ folder: uploadsFolder }), router],
   theApiOptions: { port: 7788 },
 });
 
