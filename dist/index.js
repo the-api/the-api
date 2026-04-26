@@ -52621,14 +52621,25 @@ __export(exports_middlewares, {
 
 // src/middlewares/logs.ts
 var HIDDEN_FIELDS = ["password", "token", "refresh", "authorization"];
-var hideObjectValues = (obj) => {
-  if (!obj || typeof obj !== "object")
-    return;
-  for (const key of HIDDEN_FIELDS) {
-    if (key in obj) {
-      obj[key] = "<hidden>";
+var isHiddenField = (key) => HIDDEN_FIELDS.includes(key.toLowerCase());
+var createHiddenFieldsReplacer = () => {
+  const seen = new WeakSet;
+  return (key, value) => {
+    if (isHiddenField(key))
+      return "<hidden>";
+    if (value && typeof value === "object") {
+      if (seen.has(value))
+        return "[circular]";
+      seen.add(value);
     }
+    return value;
+  };
+};
+var stringifyForLogs = (line) => {
+  if (line instanceof Error || typeof line !== "object" || line === null) {
+    return line;
   }
+  return JSON.stringify(line, createHiddenFieldsReplacer());
 };
 var createLogger = ({
   id,
@@ -52639,8 +52650,7 @@ var createLogger = ({
   const date = new Date;
   const ms = +date - +startTime;
   for (const line of toLog) {
-    const isPlain = line instanceof Error || typeof line !== "object";
-    const data = isPlain ? line : JSON.stringify(line);
+    const data = stringifyForLogs(line);
     console.log(`[${date.toISOString()}] [${id}] [${method}] [${path4}] [${ms}] ${data}`);
   }
 };
@@ -52662,14 +52672,11 @@ var logMiddleware = async (c, n) => {
   const { path: path4 } = c.req;
   c.set("log", createLogger({ id, startTime, method, path: path4 }));
   const ip = c.env?.ip?.address;
-  const query = { ...c.var.query };
+  const query = c.var.query;
   const body = getBodyForLogs(c);
-  hideObjectValues(query);
-  hideObjectValues(body);
   c.var.log("[begin]", { headers, query, body, ip, method, path: path4 });
   await n();
-  const result = c.var.result ? { ...c.var.result } : "";
-  hideObjectValues(result);
+  const result = c.var.result || "";
   const responseSizeOnly = `${process.env.LOGS_SHOW_RESPONSE_SIZE_ONLY}` === "true";
   const response = responseSizeOnly ? `${JSON.stringify(result).length}b` : result;
   c.var.log(response, "[end]");

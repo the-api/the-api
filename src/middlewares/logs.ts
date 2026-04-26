@@ -4,13 +4,30 @@ import type { AppContext } from '../types';
 
 const HIDDEN_FIELDS = ['password', 'token', 'refresh', 'authorization'];
 
-const hideObjectValues = (obj: unknown): void => {
-  if (!obj || typeof obj !== 'object') return;
-  for (const key of HIDDEN_FIELDS) {
-    if (key in (obj as Record<string, unknown>)) {
-      (obj as Record<string, unknown>)[key] = '<hidden>';
+const isHiddenField = (key: string): boolean =>
+  HIDDEN_FIELDS.includes(key.toLowerCase());
+
+const createHiddenFieldsReplacer = () => {
+  const seen = new WeakSet<object>();
+
+  return (key: string, value: unknown): unknown => {
+    if (isHiddenField(key)) return '<hidden>';
+
+    if (value && typeof value === 'object') {
+      if (seen.has(value)) return '[circular]';
+      seen.add(value);
     }
+
+    return value;
+  };
+};
+
+const stringifyForLogs = (line: unknown): unknown => {
+  if (line instanceof Error || typeof line !== 'object' || line === null) {
+    return line;
   }
+
+  return JSON.stringify(line, createHiddenFieldsReplacer());
 };
 
 const createLogger =
@@ -29,8 +46,7 @@ const createLogger =
     const date = new Date();
     const ms = +date - +startTime;
     for (const line of toLog) {
-      const isPlain = line instanceof Error || typeof line !== 'object';
-      const data = isPlain ? line : JSON.stringify(line);
+      const data = stringifyForLogs(line);
       console.log(
         `[${date.toISOString()}] [${id}] [${method}] [${path}] [${ms}] ${data}`,
       );
@@ -61,20 +77,14 @@ const logMiddleware = async (c: AppContext, n: Next) => {
   c.set('log', createLogger({ id, startTime, method, path }));
 
   const ip = c.env?.ip?.address;
-  const query = { ...c.var.query };
+  const query = c.var.query;
   const body = getBodyForLogs(c);
-
-  hideObjectValues(query);
-  hideObjectValues(body);
 
   c.var.log('[begin]', { headers, query, body, ip, method, path });
 
   await n();
 
-  const result = c.var.result
-    ? { ...(c.var.result as Record<string, unknown>) }
-    : '';
-  hideObjectValues(result);
+  const result = c.var.result || '';
 
   const responseSizeOnly =
     `${process.env.LOGS_SHOW_RESPONSE_SIZE_ONLY}` === 'true';
