@@ -6,7 +6,7 @@ const { client } = await testClient({
   migrationDirs: ['./tests/migrations'],
   routings: [langs],
   crudParams: [
-    { table: 'dict' },
+    { table: 'dict', prefix: 'langs' },
     {
       table: 'testNews',
       translate: ['name'],
