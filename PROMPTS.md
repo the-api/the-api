@@ -4977,7 +4977,7 @@ import { langs } from 'the-api-langs';
 
 const router = new Routings({ migrationDirs: ['./test/migrations'] });
 
-router.crud({ table: 'langs' });
+router.crud({ table: 'dict' });
 
 router.crud({
   table: 'testNews',

@@ -13,6 +13,7 @@
       - [Query parameters for GET all](#query-parameters-for-get-all)
       - [Overriding methods](#overriding-methods)
       - [Query params helper](#query-params-helper)
+      - [Request state helpers](#request-state-helpers)
     - [Validation example](#validation-example)
     - [Field rules example](#field-rules-example)
     - [Roles \& Permissions example](#roles--permissions-example)
@@ -253,7 +254,7 @@ await theAPI.up();
 | `_fields` | Return only selected fields | `?_fields=id,warningLevel,body` |
 | `_join` | Include `joinOnDemand` relations | `?_join=author,comments` |
 | `_search` | Full-text/trigram search (when `searchFields` configured) | `?_search=test` |
-| `_lang` | Translate fields via `langs` table | `?_lang=de` |
+| `_lang` | Translate fields via `dict` table | `?_lang=de` |
 | `<field>` | Exact match (`IN` if repeated or array) | `?warningLevel=3` |
 | `<field>~` | Case-insensitive `LIKE` (`ilike`) for string fields | `?body~=%test%` |
 | `<field>!` | Not equal (`NOT IN` for array/repeated values) | `?warningLevel!=1` |

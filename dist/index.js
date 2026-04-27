@@ -41979,7 +41979,9 @@ class CrudBuilder {
         this.state.res.leftJoin(...item);
       if (this.leftJoinDistinct) {
         const sortArr = (_sort || this.defaultSort || "").replace(/(^|,)-/g, ",").split(",").filter(Boolean);
-        this.state.res.distinct(!f ? [] : sortArr.map((item) => !f.includes(item) && `${this.table}.${item}`).filter(Boolean));
+        const selectedFields = f;
+        const distinctColumns = selectedFields ? sortArr.filter((item) => !selectedFields.includes(item)).map((item) => `${this.table}.${item}`) : [];
+        this.state.res.distinct(distinctColumns);
       }
     }
     let join = [...this.join];
@@ -41993,8 +41995,9 @@ class CrudBuilder {
       }
     }
     if (f) {
-      join = join.filter(({ table, alias }) => f.includes(table) || (alias ? f.includes(alias) : false));
-      f = f.filter((name) => !join.find(({ table, alias }) => name === table || name === alias));
+      const selectedFields = f;
+      join = join.filter(({ table, alias }) => selectedFields.includes(table) || (alias ? selectedFields.includes(alias) : false));
+      f = selectedFields.filter((name) => !join.find(({ table, alias }) => name === table || name === alias));
     }
     let joinCoalesce = (f || Object.keys(this.state.rows)).map((l) => `${this.table}.${l}`);
     if (this.includeDeleted && this.deletedReplacements && this.state.rows.isDeleted) {
@@ -42012,8 +42015,8 @@ class CrudBuilder {
     if (this.state.lang && this.state.lang !== "en") {
       for (const field of this.translate) {
         this.state.langJoin[field] = `COALESCE( (
-          select text from langs where lang=:lang and "textKey" = any(
-            select "textKey" from langs where lang='en' and text = "${this.table}"."${field}"
+          select text from dict where lang=:lang and "textKey" = any(
+            select "textKey" from dict where lang='en' and text = "${this.table}"."${field}"
           ) limit 1), name )`;
         joinCoalesce.push(db.raw(this.state.langJoin[field] + `AS "${field}"`, { lang: this.state.lang }));
       }
@@ -42039,7 +42042,7 @@ class CrudBuilder {
       }
       const orderByStr = orderBy ? `ORDER BY ${orderBy}` : "";
       const limitStr = limit ? `LIMIT ${limit}` : "";
-      const lang = table === "lang" && this.state.lang?.match(/^\w{2}$/) ? `AND lang='${this.state.lang}'` : "";
+      const lang = table === "dict" && this.state.lang?.match(/^\w{2}$/) ? `AND lang='${this.state.lang}'` : "";
       const ff = joinFields?.map((item) => typeof item === "string" ? `'${item}', "${as || table}"."${item}"` : `'${Object.keys(item)[0]}', ${Object.values(item)[0]}`);
       const f2 = ff ? `json_build_object(${ff.join(", ")})` : `"${as || table}".*`;
       const f3 = field || `jsonb_agg(${f2})`;
@@ -42153,8 +42156,8 @@ class CrudBuilder {
     }
     const rows = this.state.rows;
     const filtered = this.filterDataByTableColumns(data, rows);
-    if (rows.userId && this.state.user) {
-      filtered.userId = this.state.user.id;
+    if (rows[this.userIdFieldName] && this.state.user) {
+      filtered[this.userIdFieldName] = this.state.user.id;
     }
     return filtered;
   }
@@ -42868,6 +42871,7 @@ var buildPatchFromPost = (post) => {
 };
 var buildCrudValidationSchemaFromTable = (c, params) => {
   const normalizedParams = normalizeCrudConfig(params);
+  const userIdFieldName = normalizedParams.userIdFieldName || "userId";
   const columns = resolveTableColumns(c, normalizedParams);
   const columnEntries = Object.entries(columns);
   const columnNames = columnEntries.map(([name]) => name);
@@ -42951,7 +42955,7 @@ var buildCrudValidationSchemaFromTable = (c, params) => {
   for (const [name, column] of columnEntries) {
     if (readOnly.includes(name))
       continue;
-    const required = column.is_nullable === "NO" && (column.column_default === null || typeof column.column_default === "undefined");
+    const required = name !== userIdFieldName && column.is_nullable === "NO" && (column.column_default === null || typeof column.column_default === "undefined");
     bodyPost[name] = getColumnValidationRule(column, { required });
   }
   const bodyPatch = buildPatchFromPost(bodyPost);
@@ -43222,6 +43226,7 @@ class Routings {
   routesEmailTemplates = {};
   crudPermissionsMeta = [];
   migrationDirs;
+  pathPrefix = "";
   constructor(options) {
     if (options?.migrationDirs)
       this.migrationDirs = options.migrationDirs;
@@ -43232,23 +43237,39 @@ class Routings {
       this.routes.push({ path, method, handlers });
     }
   }
-  get(path, ...fnArr) {
+  prefix(path) {
+    this.pathPrefix = path;
+    return this;
+  }
+  get(p, ...fnArr) {
+    const path = `${this.pathPrefix}${p}`.replace(/^\/+/g, "/");
     this.pushToRoutes({ method: "GET", path, fnArr });
+    return this;
   }
-  post(path, ...fnArr) {
+  post(p, ...fnArr) {
+    const path = `${this.pathPrefix}${p}`.replace(/^\/+/g, "/");
     this.pushToRoutes({ method: "POST", path, fnArr });
+    return this;
   }
-  patch(path, ...fnArr) {
+  patch(p, ...fnArr) {
+    const path = `${this.pathPrefix}${p}`.replace(/^\/+/g, "/");
     this.pushToRoutes({ method: "PATCH", path, fnArr });
+    return this;
   }
-  delete(path, ...fnArr) {
+  delete(p, ...fnArr) {
+    const path = `${this.pathPrefix}${p}`.replace(/^\/+/g, "/");
     this.pushToRoutes({ method: "DELETE", path, fnArr });
+    return this;
   }
-  use(path, ...fnArr) {
+  use(p, ...fnArr) {
+    const path = `${this.pathPrefix}${p}`.replace(/^\/+/g, "/");
     this.pushToRoutes({ path, fnArr });
+    return this;
   }
   all(...fnArr) {
-    this.pushToRoutes({ path: "*", fnArr });
+    const path = `${this.pathPrefix}*`.replace(/^\/+/g, "/");
+    this.pushToRoutes({ path, fnArr });
+    return this;
   }
   crud(params) {
     const normalizedParams = normalizeCrudConfig(params);
@@ -43293,7 +43314,7 @@ class Routings {
       await cb.delete(c);
     });
     this.crudPermissionsMeta.push({
-      path: p,
+      path: `${this.pathPrefix}${p}`,
       permissionPrefix,
       methodsConfigured,
       tableName: table
@@ -43317,10 +43338,10 @@ class Routings {
   errors(err) {
     const errArr = Array.isArray(err) ? err : [err];
     for (const e of errArr)
-      this.routesErrors = { ...this.routesErrors, ...e };
+      Object.assign(this.routesErrors, e);
   }
   emailTemplates(template) {
-    this.routesEmailTemplates = { ...this.routesEmailTemplates, ...template };
+    Object.assign(this.routesEmailTemplates, template);
   }
 }
 // src/TheApi.ts
