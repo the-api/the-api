@@ -65,7 +65,7 @@ export class TheAPI {
     const { routings, roles, emailTemplates, port, migrationDirs } =
       options || {};
 
-    this.app = new Hono<AppEnv>({ router: new RegExpRouter() });
+    this.app = new Hono<AppEnv>({ router: new RegExpRouter(), strict: false });
     if (roles) {
       roles.init();
       this.roles = roles;
