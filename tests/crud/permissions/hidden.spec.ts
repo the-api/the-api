@@ -124,12 +124,12 @@ describe('Hidden', () => {
     test('create testNews', async () => {
       await client.post(
         '/testNews',
-        { userId: users.noRole.id, name: 'test111', timePublished: 'NOW()', timeDeleted: 'NOW()' },
+        { userId: users.noRole.userId, name: 'test111', timePublished: 'NOW()', timeDeleted: 'NOW()' },
         tokens.noRole,
       );
       await client.post(
         '/testNews',
-        { userId: users.noRole.id, name: 'test112', views: 100, timeCreated: DateTime.fromISO('2024-06-01').toString() },
+        { userId: users.noRole.userId, name: 'test112', views: 100, timeCreated: DateTime.fromISO('2024-06-01').toString() },
         tokens.noRole,
       );
     });

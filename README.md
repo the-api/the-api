@@ -1289,7 +1289,7 @@ test('full testClient usage', async () => {
   await client.post('/messages', { body: `created ${DateTime.now().toISO()}` }, tokens.root);
   const { result } = await client.get('/messages', tokens.admin);
   expect(result.length > 0).toEqual(true);
-  expect(users.root.id).toEqual(1);
+  expect(users.root.userId).toEqual(1);
   await client.truncateTables('messages');
 });
 ```

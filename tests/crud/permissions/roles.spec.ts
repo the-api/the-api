@@ -39,11 +39,11 @@ const { client } = await testClient({
   roles,
 });
 
-const rootToken = client.generateGWT({ id: 1, roles: ['root'] });
-const adminToken = client.generateGWT({ id: 2, roles: ['admin'] });
-const registeredToken = client.generateGWT({ id: 3, roles: ['registered'] });
-const unknownToken = client.generateGWT({ id: 4, roles: ['unknown'] });
-const noToken = client.generateGWT({ id: 5 });
+const rootToken = client.generateGWT({ userId: 1, roles: ['root'] });
+const adminToken = client.generateGWT({ userId: 2, roles: ['admin'] });
+const registeredToken = client.generateGWT({ userId: 3, roles: ['registered'] });
+const unknownToken = client.generateGWT({ userId: 4, roles: ['unknown'] });
+const noToken = client.generateGWT({ userId: 5 });
 
 describe('Roles', () => {
   describe('root token create/get', () => {

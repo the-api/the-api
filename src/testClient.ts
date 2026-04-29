@@ -29,8 +29,7 @@ export type HttpPostBodyType = {
 };
 
 export type TestClientUserType = {
-  id: number;
-  userId?: number;
+  userId: number;
   roles?: string[];
   token?: string;
 };
@@ -64,12 +63,12 @@ export type TestClientResultType = {
 // ======================== Constants ========================
 
 const DEFAULT_USERS: Readonly<TestClientUsersType> = {
-  root: { id: 1, userId: 1, roles: ['root'] },
-  admin: { id: 2, userId: 2, roles: ['admin'] },
-  registered: { id: 3, userId: 3, roles: ['registered'] },
-  manager: { id: 4, userId: 4, roles: ['manager'] },
-  unknown: { id: 5, userId: 5, roles: ['unknown'] },
-  noRole: { id: 6, userId: 6 },
+  root: { userId: 1, roles: ['root'] },
+  admin: { userId: 2, roles: ['admin'] },
+  registered: { userId: 3, roles: ['registered'] },
+  manager: { userId: 4, roles: ['manager'] },
+  unknown: { userId: 5, roles: ['unknown'] },
+  noRole: { userId: 6 },
 };
 
 // ======================== Internal helpers ========================

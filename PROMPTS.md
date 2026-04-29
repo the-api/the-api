@@ -3908,8 +3908,8 @@ describe('Hidden', () => {
 
   describe('owner', () => {
     test('create testNews', async () => {
-      await client.post('/testNews', { userId: users.noRole.id, name: 'test111', timePublished: 'NOW()', timeDeleted: 'NOW()' });
-      await client.post('/testNews', { userId: users.noRole.id, name: 'test112', views: 100, timeCreated: DateTime.fromISO('2024-06-01').toString() });
+      await client.post('/testNews', { userId: users.noRole.userId, name: 'test111', timePublished: 'NOW()', timeDeleted: 'NOW()' });
+      await client.post('/testNews', { userId: users.noRole.userId, name: 'test112', views: 100, timeCreated: DateTime.fromISO('2024-06-01').toString() });
     });
 
     test('GET /testNews', async () => {
@@ -4206,11 +4206,11 @@ router.crud({
 const theAPI = new TheAPI({ roles, routings: [router] });
 const client = await getTestClient(theAPI);
 
-const rootToken = client.generateGWT({ id: 1, roles: ['root'] });
-const adminToken = client.generateGWT({ id: 2, roles: ['admin'] });
-const registeredToken = client.generateGWT({ id: 3, roles: ['registered'] });
-const unknownToken = client.generateGWT({ id: 4, roles: ['unknown'] });
-const noToken = client.generateGWT({ id: 5 });
+const rootToken = client.generateGWT({ userId: 1, roles: ['root'] });
+const adminToken = client.generateGWT({ userId: 2, roles: ['admin'] });
+const registeredToken = client.generateGWT({ userId: 3, roles: ['registered'] });
+const unknownToken = client.generateGWT({ userId: 4, roles: ['unknown'] });
+const noToken = client.generateGWT({ userId: 5 });
 
 describe('Roles', () => {
   describe('init', () => {
@@ -5093,15 +5093,15 @@ export class TestClient {
   tokens: Record<string, string> = {};
   users: Record<
     string,
-    { id: number; roles?: string[]; token?: string }
+    { userId: number; roles?: string[]; token?: string }
   > = {
-    root: { id: 1, roles: ['root'] },
-    admin: { id: 2, roles: ['admin'] },
-    registered: { id: 3, roles: ['registered'] },
-    manager: { id: 4, roles: ['manager'] },
-    unknown: { id: 5, roles: ['unknown'] },
-    noRole: { id: 6 },
-    noToken: { id: 0 },
+    root: { userId: 1, roles: ['root'] },
+    admin: { userId: 2, roles: ['admin'] },
+    registered: { userId: 3, roles: ['registered'] },
+    manager: { userId: 4, roles: ['manager'] },
+    unknown: { userId: 5, roles: ['unknown'] },
+    noRole: { userId: 6 },
+    noToken: { userId: 0 },
   };
 
   constructor(options?: TestLibParamsType) {

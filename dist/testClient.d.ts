@@ -12,8 +12,7 @@ export type HttpPostBodyType = {
     [key: string]: BodyType | BodyType[];
 };
 export type TestClientUserType = {
-    id: number;
-    userId?: number;
+    userId: number;
     roles?: string[];
     token?: string;
 };

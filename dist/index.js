@@ -41682,6 +41682,47 @@ var toPositiveInt = (value, fallback) => {
   return Math.floor(n);
 };
 var toActionFlags = (input) => (input || []).reduce((acc, cur) => ({ ...acc, [cur]: true }), {});
+var isNumericDbType = (dataType) => {
+  const dt = String(dataType || "").toLowerCase();
+  if ([
+    "integer",
+    "int",
+    "int2",
+    "int4",
+    "int8",
+    "smallint",
+    "bigint",
+    "numeric",
+    "decimal",
+    "real",
+    "double precision",
+    "float",
+    "serial",
+    "bigserial",
+    "smallserial"
+  ].includes(dt))
+    return true;
+  return /^(numeric|decimal|float)\b/.test(dt);
+};
+var isIntegerDbType = (dataType) => {
+  const dt = String(dataType || "").toLowerCase();
+  return [
+    "integer",
+    "int",
+    "int2",
+    "int4",
+    "int8",
+    "smallint",
+    "bigint",
+    "serial",
+    "bigserial",
+    "smallserial"
+  ].includes(dt);
+};
+var isDateDbType = (dataType) => {
+  const dt = String(dataType || "").toLowerCase();
+  return dt.includes("date") || dt.includes("timestamp") || dt.includes("time");
+};
 
 class CrudBuilder {
   table;
@@ -41784,6 +41825,9 @@ class CrudBuilder {
   }
   getRolesFromContext(c) {
     return c.var?.roles || c.env?.roles;
+  }
+  getCurrentUserId() {
+    return this.state.user?.userId;
   }
   getDbWithSchema(db) {
     const qb = db(this.table);
@@ -42135,7 +42179,9 @@ class CrudBuilder {
   deleteHiddenFieldsFromResult(result, hiddenFields) {
     if (!result || !hiddenFields)
       return;
-    const isOwner = this.state.user?.id && result[this.userIdFieldName] === this.state.user.id;
+    const currentUserId = this.getCurrentUserId();
+    const resultUserId = result[this.userIdFieldName];
+    const isOwner = currentUserId != null && resultUserId != null && String(resultUserId) === String(currentUserId);
     const fields = hiddenFields[isOwner ? "owner" : "regular"];
     for (const key of fields)
       delete result[key];
@@ -42144,10 +42190,16 @@ class CrudBuilder {
     const filtered = {};
     for (const key of Object.keys(data)) {
       if (rows[key] && !this.readOnlyFields.includes(key)) {
-        filtered[key] = data[key];
+        filtered[key] = this.normalizeWriteValue(data[key], rows[key]);
       }
     }
     return filtered;
+  }
+  normalizeWriteValue(value, column) {
+    if (value === "" && column.is_nullable === "YES" && (isNumericDbType(column.data_type) || isDateDbType(column.data_type))) {
+      return null;
+    }
+    return value;
   }
   updateData(c, data) {
     for (const [key, errorCode] of Object.entries(this.requiredFields)) {
@@ -42157,7 +42209,7 @@ class CrudBuilder {
     const rows = this.state.rows;
     const filtered = this.filterDataByTableColumns(data, rows);
     if (rows[this.userIdFieldName] && this.state.user) {
-      filtered[this.userIdFieldName] = this.state.user.id;
+      filtered[this.userIdFieldName] = this.getCurrentUserId();
     }
     return filtered;
   }
@@ -42413,9 +42465,10 @@ class CrudBuilder {
     c.set("relationsData", this.relations);
   }
   validateIntegerFields(data) {
+    const rows = this.state?.rows || this.dbTables;
     for (const key of Object.keys(data)) {
-      const isInt = this.dbTables?.[key]?.data_type === "integer";
-      const hasNaN = [].concat(data[key]).find((item) => item && Number.isNaN(+item));
+      const isInt = isIntegerDbType(rows[key]?.data_type);
+      const hasNaN = [].concat(data[key]).find((item) => item !== null && typeof item !== "undefined" && item !== "" && Number.isNaN(+item));
       if (isInt && hasNaN)
         throw new Error("INTEGER_REQUIRED");
       data[key] = data[key] ?? null;
@@ -42434,7 +42487,7 @@ class CrudBuilder {
     if (rows.isDeleted)
       whereClause.isDeleted = false;
     const rawData = await this.getRequestBody(c);
-    const data = this.filterDataByTableColumns(rawData, rows);
+    const data = this.validateIntegerFields(this.filterDataByTableColumns(rawData, rows));
     if (Object.keys(data).length) {
       if (rows.timeUpdated)
         data.timeUpdated = db.fn.now();
@@ -42750,7 +42803,7 @@ var splitSortFields = (value) => {
     return value;
   return value.split(",").map((item) => item.trim().replace(/^-/, "")).filter(Boolean);
 };
-var isNumericDbType = (dataType) => {
+var isNumericDbType2 = (dataType) => {
   const dt = dataType.toLowerCase();
   return [
     "integer",
@@ -42767,7 +42820,7 @@ var isNumericDbType = (dataType) => {
   ].some((name) => dt.includes(name));
 };
 var isBooleanDbType = (dataType) => dataType.toLowerCase().includes("bool");
-var isDateDbType = (dataType) => {
+var isDateDbType2 = (dataType) => {
   const dt = dataType.toLowerCase();
   return dt.includes("date") || dt.includes("timestamp") || dt.includes("time");
 };
@@ -42786,7 +42839,7 @@ var getColumnValidationRule = (column, options) => {
     };
   }
   const dataType = String(column.data_type || "").toLowerCase();
-  if (isNumericDbType(dataType)) {
+  if (isNumericDbType2(dataType)) {
     return {
       type: "number",
       ...typeof column.check_min === "number" && { min: column.check_min },
@@ -42797,7 +42850,7 @@ var getColumnValidationRule = (column, options) => {
   if (isBooleanDbType(dataType)) {
     return { type: "boolean", ...required && { required: true } };
   }
-  if (isDateDbType(dataType)) {
+  if (isDateDbType2(dataType)) {
     return { type: "date", ...required && { required: true } };
   }
   if (isJsonDbType(dataType)) {
@@ -44478,7 +44531,7 @@ class TheAPI {
   emailTemplates = {};
   constructor(options) {
     const { routings, roles, emailTemplates, port: port2, migrationDirs } = options || {};
-    this.app = new Hono({ router: new RegExpRouter });
+    this.app = new Hono({ router: new RegExpRouter, strict: false });
     if (roles) {
       roles.init();
       this.roles = roles;
@@ -52439,12 +52492,12 @@ import { DateTime } from "luxon";
 import { testClient as honoTestClient } from "hono/testing";
 import Roles from "the-api-roles";
 var DEFAULT_USERS = {
-  root: { id: 1, userId: 1, roles: ["root"] },
-  admin: { id: 2, userId: 2, roles: ["admin"] },
-  registered: { id: 3, userId: 3, roles: ["registered"] },
-  manager: { id: 4, userId: 4, roles: ["manager"] },
-  unknown: { id: 5, userId: 5, roles: ["unknown"] },
-  noRole: { id: 6, userId: 6 }
+  root: { userId: 1, roles: ["root"] },
+  admin: { userId: 2, roles: ["admin"] },
+  registered: { userId: 3, roles: ["registered"] },
+  manager: { userId: 4, roles: ["manager"] },
+  unknown: { userId: 5, roles: ["unknown"] },
+  noRole: { userId: 6 }
 };
 var _db = null;
 function getDb() {
@@ -53118,7 +53171,7 @@ var splitSortFields2 = (value) => {
     return value;
   return value.split(",").map((item) => item.trim().replace(/^-/, "")).filter(Boolean);
 };
-var isNumericDbType2 = (dataType) => {
+var isNumericDbType3 = (dataType) => {
   const dt = dataType.toLowerCase();
   return [
     "integer",
@@ -53135,7 +53188,7 @@ var isNumericDbType2 = (dataType) => {
   ].some((name2) => dt.includes(name2));
 };
 var isBooleanDbType2 = (dataType) => dataType.toLowerCase().includes("bool");
-var isDateDbType2 = (dataType) => {
+var isDateDbType3 = (dataType) => {
   const dt = dataType.toLowerCase();
   return dt.includes("date") || dt.includes("timestamp") || dt.includes("time");
 };
@@ -53154,7 +53207,7 @@ var getColumnValidationRule2 = (column, options) => {
     };
   }
   const dataType = String(column.data_type || "").toLowerCase();
-  if (isNumericDbType2(dataType)) {
+  if (isNumericDbType3(dataType)) {
     return {
       type: "number",
       ...typeof column.check_min === "number" && { min: column.check_min },
@@ -53165,7 +53218,7 @@ var getColumnValidationRule2 = (column, options) => {
   if (isBooleanDbType2(dataType)) {
     return { type: "boolean", ...required && { required: true } };
   }
-  if (isDateDbType2(dataType)) {
+  if (isDateDbType3(dataType)) {
     return { type: "date", ...required && { required: true } };
   }
   if (isJsonDbType2(dataType)) {
