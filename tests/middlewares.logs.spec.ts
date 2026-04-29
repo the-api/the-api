@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { Hono } from 'hono';
 import { Routings } from 'the-api-routings';
 import { logs } from '../src/middlewares/logs';
+import { parseRequestBody } from '../src/requestState';
 import type { Next } from 'hono';
 import type { AppContext, AppEnv } from '../src/types';
 
@@ -11,8 +12,9 @@ const router = new Routings();
 
 app.use('*', async (c: AppContext, next: Next) => {
   c.set('query', {});
-  c.set('body', await c.req.json());
-  c.set('bodyType', 'json');
+  const { body, bodyType } = await parseRequestBody(c);
+  c.set('body', body);
+  c.set('bodyType', bodyType);
   c.set('log', console.log);
 
   await next();
@@ -44,6 +46,10 @@ router.post('/logs/manual', async (c: AppContext) => {
 
   c.var.log(logged);
   c.set('result', logged);
+});
+
+router.post('/logs/form', async (c: AppContext) => {
+  c.set('result', { ok: true, bodyType: c.var.bodyType });
 });
 
 for (const route of logs.routes) {
@@ -138,5 +144,48 @@ describe('middlewares.logs', () => {
     expect(output).toContain('<hidden>');
     expect(output).not.toContain('manual-secret');
     expect(output).not.toContain('nested-secret');
+  });
+
+  test('logs multipart form body with file metadata', async () => {
+    const lines: string[] = [];
+    const originalLog = console.log;
+    console.log = (...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    };
+
+    const body = new FormData();
+    body.append('name', 'Aurora');
+    body.append('password', 'form-secret');
+    body.append(
+      'photo',
+      new File(['ship-data'], 'ship.txt', {
+        type: 'text/plain',
+        lastModified: 123,
+      }),
+    );
+
+    let response: { result: unknown };
+    try {
+      const res = await app.fetch(
+        new Request('http://localhost:7788/logs/form', {
+          method: 'POST',
+          body,
+        }),
+      );
+      response = await res.json();
+    } finally {
+      console.log = originalLog;
+    }
+
+    expect(response.result).toEqual({ ok: true, bodyType: 'form' });
+
+    const output = lines.join('\n');
+
+    expect(output).toContain('"body":{"name":"Aurora"');
+    expect(output).toContain('"photo":{"name":"ship.txt"');
+    expect(output).toContain('"size":9');
+    expect(output).toContain('<hidden>');
+    expect(output).not.toContain('[multipart form-data omitted]');
+    expect(output).not.toContain('form-secret');
   });
 });

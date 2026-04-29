@@ -52643,11 +52643,20 @@ __export(exports_middlewares, {
 // src/middlewares/logs.ts
 var HIDDEN_FIELDS = ["password", "token", "refresh", "authorization"];
 var isHiddenField = (key) => HIDDEN_FIELDS.includes(key.toLowerCase());
+var isFile = (value) => typeof File !== "undefined" && value instanceof File;
+var getFileForLogs = (file) => ({
+  name: file.name,
+  type: file.type,
+  size: file.size,
+  lastModified: file.lastModified
+});
 var createHiddenFieldsReplacer = () => {
   const seen = new WeakSet;
   return (key, value) => {
     if (isHiddenField(key))
       return "<hidden>";
+    if (isFile(value))
+      return getFileForLogs(value);
     if (value && typeof value === "object") {
       if (seen.has(value))
         return "[circular]";
@@ -52676,10 +52685,6 @@ var createLogger = ({
   }
 };
 var getBodyForLogs = (c) => {
-  const contentType = c.req.raw.headers.get("content-type") || "";
-  if (contentType.startsWith("multipart/form-data")) {
-    return "[multipart form-data omitted]";
-  }
   if (c.var.bodyType === "arrayBuffer") {
     return `[${c.var.body?.byteLength || 0} bytes]`;
   }

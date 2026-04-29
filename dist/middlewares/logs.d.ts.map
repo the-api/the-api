@@ -1,1 +1,1 @@
-{"version":3,"file":"logs.d.ts","sourceRoot":"","sources":["../../src/middlewares/logs.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,QAAQ,EAAE,MAAM,kBAAkB,CAAC;AAiG5C,QAAA,MAAM,IAAI,UAAiB,CAAC;AAG5B,OAAO,EAAE,IAAI,EAAE,CAAC"}
+{"version":3,"file":"logs.d.ts","sourceRoot":"","sources":["../../src/middlewares/logs.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,QAAQ,EAAE,MAAM,kBAAkB,CAAC;AAsG5C,QAAA,MAAM,IAAI,UAAiB,CAAC;AAG5B,OAAO,EAAE,IAAI,EAAE,CAAC"}

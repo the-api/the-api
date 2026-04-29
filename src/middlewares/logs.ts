@@ -7,11 +7,22 @@ const HIDDEN_FIELDS = ['password', 'token', 'refresh', 'authorization'];
 const isHiddenField = (key: string): boolean =>
   HIDDEN_FIELDS.includes(key.toLowerCase());
 
+const isFile = (value: unknown): value is File =>
+  typeof File !== 'undefined' && value instanceof File;
+
+const getFileForLogs = (file: File): Record<string, unknown> => ({
+  name: file.name,
+  type: file.type,
+  size: file.size,
+  lastModified: file.lastModified,
+});
+
 const createHiddenFieldsReplacer = () => {
   const seen = new WeakSet<object>();
 
   return (key: string, value: unknown): unknown => {
     if (isHiddenField(key)) return '<hidden>';
+    if (isFile(value)) return getFileForLogs(value);
 
     if (value && typeof value === 'object') {
       if (seen.has(value)) return '[circular]';
@@ -54,12 +65,6 @@ const createLogger =
   };
 
 const getBodyForLogs = (c: AppContext): unknown => {
-  const contentType = c.req.raw.headers.get('content-type') || '';
-
-  if (contentType.startsWith('multipart/form-data')) {
-    return '[multipart form-data omitted]';
-  }
-
   if (c.var.bodyType === 'arrayBuffer') {
     return `[${(c.var.body as ArrayBuffer)?.byteLength || 0} bytes]`;
   }
