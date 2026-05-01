@@ -29,6 +29,7 @@ export declare class Files {
     private listObjectNames;
     private validateImageSize;
     private isImageBuffer;
+    private getImageNameLengthBytes;
     private generateImageName;
 }
 //# sourceMappingURL=Files.d.ts.map

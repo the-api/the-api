@@ -52200,6 +52200,7 @@ Client.prototype.removeAllBucketNotification = callbackify(Client.prototype.remo
 // src/Files.ts
 var require2 = createRequire2(import.meta.url);
 var sharp = require2("sharp");
+var DEFAULT_IMAGE_NAME_LENGTH_BYTES = 6;
 
 class Files {
   minioClient;
@@ -52480,8 +52481,19 @@ class Files {
       return false;
     }
   }
+  getImageNameLengthBytes() {
+    const rawValue = process.env.IMAGE_NAME_LENGTH_BYTES;
+    if (!rawValue) {
+      return DEFAULT_IMAGE_NAME_LENGTH_BYTES;
+    }
+    const value = Number(rawValue);
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new Error("FILES_INVALID_IMAGE_NAME_LENGTH_BYTES_CONFIG");
+    }
+    return value;
+  }
   generateImageName() {
-    return randomBytes(6).toString("hex");
+    return randomBytes(this.getImageNameLengthBytes()).toString("hex");
   }
 }
 // src/testClient.ts
@@ -52856,6 +52868,11 @@ var FILES_ERRORS = {
     code: 133,
     status: 500,
     description: "IMAGE_SIZES must be in the format name:WIDTHxHEIGHT"
+  },
+  FILES_INVALID_IMAGE_NAME_LENGTH_BYTES_CONFIG: {
+    code: 134,
+    status: 500,
+    description: "IMAGE_NAME_LENGTH_BYTES must be a positive integer"
   }
 };
 var createFiles = (options) => {

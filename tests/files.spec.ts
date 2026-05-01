@@ -99,9 +99,11 @@ describe('files', () => {
 
   test('POST /upload_image', async () => {
     const previousImageSizes = process.env.IMAGE_SIZES;
+    const previousImageNameLengthBytes = process.env.IMAGE_NAME_LENGTH_BYTES;
     let uploadedPath = '';
 
     process.env.IMAGE_SIZES = 'small:200x150,medium:600x400,large:1200x900';
+    delete process.env.IMAGE_NAME_LENGTH_BYTES;
 
     try {
       const imageBuffer = await sharp({
@@ -127,7 +129,7 @@ describe('files', () => {
 
       uploadedPath = result.path;
 
-      expect(result.name).toMatch(/^[a-f0-9]{12}$/);
+      expect(result.name).toMatch(/^[a-f0-9]{32}$/);
       expect(result.originalName).toEqual('source.png');
       expect(result.path).toEqual(
         path.join(
@@ -167,6 +169,71 @@ describe('files', () => {
         delete process.env.IMAGE_SIZES;
       } else {
         process.env.IMAGE_SIZES = previousImageSizes;
+      }
+
+      if (previousImageNameLengthBytes === undefined) {
+        delete process.env.IMAGE_NAME_LENGTH_BYTES;
+      } else {
+        process.env.IMAGE_NAME_LENGTH_BYTES = previousImageNameLengthBytes;
+      }
+    }
+  });
+
+  test('POST /upload_image uses IMAGE_NAME_LENGTH_BYTES for generated image names', async () => {
+    const previousImageSizes = process.env.IMAGE_SIZES;
+    const previousImageNameLengthBytes = process.env.IMAGE_NAME_LENGTH_BYTES;
+    let uploadedPath = '';
+
+    process.env.IMAGE_SIZES = 'small:200x150';
+    process.env.IMAGE_NAME_LENGTH_BYTES = '8';
+
+    try {
+      const imageBuffer = await sharp({
+        create: {
+          width: 400,
+          height: 300,
+          channels: 3,
+          background: { r: 24, g: 120, b: 80 },
+        },
+      })
+        .png()
+        .toBuffer();
+      const file = new File([imageBuffer], 'source.png', { type: 'image/png' });
+
+      const res = await client.postFormRequest('/upload_image', { file });
+      const json = await res?.json();
+      const result = json.result as {
+        path: string;
+        name: string;
+      };
+
+      uploadedPath = result.path;
+
+      expect(result.name).toMatch(/^[a-f0-9]{16}$/);
+      expect(result.path).toEqual(
+        path.join(
+          uploadsFolder,
+          'image-uploads',
+          result.name.slice(0, 2),
+          result.name.slice(2, 4),
+          result.name,
+        ),
+      );
+    } finally {
+      if (uploadedPath) {
+        await fs.rm(uploadedPath, { recursive: true, force: true });
+      }
+
+      if (previousImageSizes === undefined) {
+        delete process.env.IMAGE_SIZES;
+      } else {
+        process.env.IMAGE_SIZES = previousImageSizes;
+      }
+
+      if (previousImageNameLengthBytes === undefined) {
+        delete process.env.IMAGE_NAME_LENGTH_BYTES;
+      } else {
+        process.env.IMAGE_NAME_LENGTH_BYTES = previousImageNameLengthBytes;
       }
     }
   });

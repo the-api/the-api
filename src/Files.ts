@@ -21,6 +21,7 @@ export class Files {
   private bucketName: string;
   private folder: string;
   private imageSizes?: FilesOptions['imageSizes'];
+  private imageNameLengthBytes: number;
 
   constructor(options?: FilesOptions) {
     const { folder, minio, imageSizes } = options || {};
@@ -32,11 +33,13 @@ export class Files {
       MINIO_ENDPOINT = 'localhost',
       MINIO_PORT = '9000',
       MINIO_USE_SSL = 'true',
+      IMAGE_NAME_LENGTH_BYTES,
     } = process.env;
 
     this.folder = folder || FILES_FOLDER || '';
     this.bucketName = minio?.bucketName || MINIO_BUCKET_NAME || '';
     this.imageSizes = imageSizes;
+    this.imageNameLengthBytes = Number(IMAGE_NAME_LENGTH_BYTES) || 16;
 
     this.minioClient =
       this.bucketName && MINIO_ACCESS_KEY && MINIO_SECRET_KEY
@@ -497,6 +500,6 @@ export class Files {
   }
 
   private generateImageName(): string {
-    return randomBytes(6).toString('hex');
+    return randomBytes(this.imageNameLengthBytes).toString('hex');
   }
 }

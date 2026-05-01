@@ -1127,9 +1127,11 @@ Environment variable format:
 
 ```env
 IMAGE_SIZES=small:200x150,medium:600x400,large:1200x900
+IMAGE_NAME_LENGTH_BYTES=6
 ```
 
-For images, `upload(file, 'uploads')` generates a random 12-character hex name such as `abcdef123456` and stores files in nested folders using the first four characters:
+For images, `upload(file, 'uploads')` generates a random hex name and stores files in nested folders using the first four characters.
+`IMAGE_NAME_LENGTH_BYTES` controls the `randomBytes(...)` size for that name; the default is `6`, which produces a 12-character hex name such as `abcdef123456`.
 
 ```text
 /path_to_save/ab/cd/abcdef123456/small.webp
@@ -1208,6 +1210,7 @@ Example result for an image upload:
 ```
 
 `IMAGE_SIZES` must use the `name:WIDTHxHEIGHT` format.
+`IMAGE_NAME_LENGTH_BYTES` must be a positive integer.
 
 ## TestClient For Integration Tests
 
