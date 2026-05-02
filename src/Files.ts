@@ -249,7 +249,7 @@ export class Files {
     const destPath = path.join(fullDir, file.name);
     await fs.writeFile(destPath, buffer);
 
-    return { path: destPath, name: file.name, size: file.size };
+    return { fullPath: destPath, path: fullDir, name: file.name, size: file.size };
   }
 
   private async uploadMinio(
@@ -268,6 +268,7 @@ export class Files {
     );
 
     return {
+      fullPath: objectName,
       path: objectName,
       name: file.name,
       size: file.size,
@@ -308,6 +309,7 @@ export class Files {
     });
 
     return {
+      fullPath: fullDir,
       path: relativeDir,
       name: imageName,
       size: file.size,
@@ -354,6 +356,7 @@ export class Files {
     });
 
     return {
+      fullPath: objectDir,
       path: objectDir,
       name: imageName,
       size: file.size,

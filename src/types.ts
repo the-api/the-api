@@ -73,6 +73,7 @@ export type EmailConfig = {
 // ------------------------------------------
 
 export type UploadResultType = {
+  fullPath: string;
   path: string;
   name: string;
   size: number;

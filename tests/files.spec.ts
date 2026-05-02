@@ -121,6 +121,7 @@ describe('files', () => {
       const res = await client.postFormRequest('/upload_image', { file });
       const json = await res?.json();
       const result = json.result as {
+        fullPath: string;
         path: string;
         name: string;
         originalName: string;
@@ -132,6 +133,14 @@ describe('files', () => {
       expect(result.name).toMatch(/^[a-f0-9]{32}$/);
       expect(result.originalName).toEqual('source.png');
       expect(result.path).toEqual(
+        path.join(
+          'image-uploads',
+          result.name.slice(0, 2),
+          result.name.slice(2, 4),
+          result.name,
+        ),
+      );
+      expect(result.fullPath).toEqual(
         path.join(
           uploadsFolder,
           'image-uploads',
