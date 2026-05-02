@@ -159,7 +159,7 @@ describe('files', () => {
 
       for (const [sizeName, size] of Object.entries(expectedSizes)) {
         const variantPath = result.sizes[sizeName]?.path;
-        expect(variantPath).toEqual(path.join(result.path, `${sizeName}.webp`));
+        expect(variantPath).toEqual(path.join(result.fullPath, `${sizeName}.webp`));
 
         const stats = await fs.stat(variantPath);
         expect(stats.isFile()).toEqual(true);
