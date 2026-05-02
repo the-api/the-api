@@ -308,7 +308,7 @@ export class Files {
     });
 
     return {
-      path: fullDir,
+      path: relativeDir,
       name: imageName,
       size: file.size,
       originalName: file.name,
