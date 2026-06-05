@@ -41827,7 +41827,7 @@ class CrudBuilder {
     return c.var?.roles || c.env?.roles;
   }
   getCurrentUserId() {
-    return this.state.user?.userId;
+    return this.state.user?.userId ?? this.state.user?.id;
   }
   getDbWithSchema(db) {
     const qb = db(this.table);
@@ -52200,13 +52200,13 @@ Client.prototype.removeAllBucketNotification = callbackify(Client.prototype.remo
 // src/Files.ts
 var require2 = createRequire2(import.meta.url);
 var sharp = require2("sharp");
-var DEFAULT_IMAGE_NAME_LENGTH_BYTES = 6;
 
 class Files {
   minioClient;
   bucketName;
   folder;
   imageSizes;
+  imageNameLengthBytes;
   constructor(options) {
     const { folder, minio, imageSizes } = options || {};
     const {
@@ -52216,11 +52216,13 @@ class Files {
       MINIO_BUCKET_NAME,
       MINIO_ENDPOINT = "localhost",
       MINIO_PORT = "9000",
-      MINIO_USE_SSL = "true"
+      MINIO_USE_SSL = "true",
+      IMAGE_NAME_LENGTH_BYTES
     } = process.env;
     this.folder = folder || FILES_FOLDER || "";
     this.bucketName = minio?.bucketName || MINIO_BUCKET_NAME || "";
     this.imageSizes = imageSizes;
+    this.imageNameLengthBytes = Number(IMAGE_NAME_LENGTH_BYTES) || 16;
     this.minioClient = this.bucketName && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? new Client({
       endPoint: minio?.endPoint || MINIO_ENDPOINT,
       port: minio?.port || parseInt(MINIO_PORT, 10),
@@ -52342,12 +52344,13 @@ class Files {
     await fs3.mkdir(fullDir, { recursive: true });
     const destPath = path2.join(fullDir, file.name);
     await fs3.writeFile(destPath, buffer);
-    return { path: destPath, name: file.name, size: file.size };
+    return { fullPath: destPath, path: fullDir, name: file.name, size: file.size };
   }
   async uploadMinio(file, buffer, destDir) {
     const objectName = path2.posix.join(destDir, file.name);
     await this.minioClient.putObject(this.bucketName, objectName, buffer, file.size, { "Content-Type": file.type || "application/octet-stream" });
     return {
+      fullPath: objectName,
       path: objectName,
       name: file.name,
       size: file.size,
@@ -52359,18 +52362,24 @@ class Files {
     const relativeDir = path2.join(destDir, imageName.slice(0, 2), imageName.slice(2, 4), imageName);
     const fullDir = path2.join(this.folder, relativeDir);
     await fs3.mkdir(fullDir, { recursive: true });
-    const sizes = await this.createImageVariants(buffer, imageSizes, async (config, resizedBuffer, info) => {
-      const destPath = path2.join(fullDir, `${config.name}.webp`);
-      await fs3.writeFile(destPath, resizedBuffer);
-      return {
-        path: destPath,
-        width: info.width,
-        height: info.height,
-        size: info.size
-      };
-    });
+    let sizes;
+    try {
+      sizes = await this.createImageVariants(buffer, imageSizes, async (config, resizedBuffer, info) => {
+        const destPath = path2.join(fullDir, `${config.name}.webp`);
+        await fs3.writeFile(destPath, resizedBuffer);
+        return {
+          path: destPath,
+          width: info.width,
+          height: info.height,
+          size: info.size
+        };
+      });
+    } catch (error) {
+      throw this.addFileNameToError(error, file.name);
+    }
     return {
-      path: fullDir,
+      fullPath: fullDir,
+      path: relativeDir,
       name: imageName,
       size: file.size,
       originalName: file.name,
@@ -52380,17 +52389,23 @@ class Files {
   async uploadMinioImage(file, buffer, destDir, imageSizes) {
     const imageName = this.generateImageName();
     const objectDir = path2.posix.join(destDir, imageName.slice(0, 2), imageName.slice(2, 4), imageName);
-    const sizes = await this.createImageVariants(buffer, imageSizes, async (config, resizedBuffer, info) => {
-      const objectName = path2.posix.join(objectDir, `${config.name}.webp`);
-      await this.minioClient.putObject(this.bucketName, objectName, resizedBuffer, resizedBuffer.byteLength, { "Content-Type": "image/webp" });
-      return {
-        path: objectName,
-        width: info.width,
-        height: info.height,
-        size: info.size
-      };
-    });
+    let sizes;
+    try {
+      sizes = await this.createImageVariants(buffer, imageSizes, async (config, resizedBuffer, info) => {
+        const objectName = path2.posix.join(objectDir, `${config.name}.webp`);
+        await this.minioClient.putObject(this.bucketName, objectName, resizedBuffer, resizedBuffer.byteLength, { "Content-Type": "image/webp" });
+        return {
+          path: objectName,
+          width: info.width,
+          height: info.height,
+          size: info.size
+        };
+      });
+    } catch (error) {
+      throw this.addFileNameToError(error, file.name);
+    }
     return {
+      fullPath: objectDir,
       path: objectDir,
       name: imageName,
       size: file.size,
@@ -52481,19 +52496,44 @@ class Files {
       return false;
     }
   }
-  getImageNameLengthBytes() {
-    const rawValue = process.env.IMAGE_NAME_LENGTH_BYTES;
-    if (!rawValue) {
-      return DEFAULT_IMAGE_NAME_LENGTH_BYTES;
-    }
-    const value = Number(rawValue);
-    if (!Number.isInteger(value) || value <= 0) {
-      throw new Error("FILES_INVALID_IMAGE_NAME_LENGTH_BYTES_CONFIG");
-    }
-    return value;
-  }
   generateImageName() {
-    return randomBytes(this.getImageNameLengthBytes()).toString("hex");
+    return randomBytes(this.imageNameLengthBytes).toString("hex");
+  }
+  addFileNameToError(error, fileName) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    if (this.errorIncludesFileName(err, fileName)) {
+      return err;
+    }
+    const currentAdditional = err.additional;
+    const fileAdditional = {
+      message: `File failed: ${fileName}`,
+      fileName
+    };
+    err.additional = Array.isArray(currentAdditional) ? [...currentAdditional, fileAdditional] : [
+      ...this.normalizeErrorAdditional(currentAdditional),
+      fileAdditional
+    ];
+    return err;
+  }
+  normalizeErrorAdditional(additional) {
+    if (typeof additional === "undefined") {
+      return [];
+    }
+    if (typeof additional === "string") {
+      return additional.trim() ? [{ message: additional.trim() }] : [];
+    }
+    if (additional && typeof additional === "object") {
+      const record = additional;
+      return [{
+        ...record,
+        message: typeof record.message === "string" ? record.message : JSON.stringify(record)
+      }];
+    }
+    return [];
+  }
+  errorIncludesFileName(error, fileName) {
+    const additional = error.additional;
+    return error.message.includes(fileName) || JSON.stringify(additional ?? "").includes(fileName);
   }
 }
 // src/testClient.ts
@@ -52868,11 +52908,6 @@ var FILES_ERRORS = {
     code: 133,
     status: 500,
     description: "IMAGE_SIZES must be in the format name:WIDTHxHEIGHT"
-  },
-  FILES_INVALID_IMAGE_NAME_LENGTH_BYTES_CONFIG: {
-    code: 134,
-    status: 500,
-    description: "IMAGE_NAME_LENGTH_BYTES must be a positive integer"
   }
 };
 var createFiles = (options) => {
