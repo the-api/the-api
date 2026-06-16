@@ -1,0 +1,9 @@
+# Publish only the compiled package surface.
+*
+
+!dist/
+!dist/**
+!README.md
+!package.json
+!LICENSE*
+!CHANGELOG*

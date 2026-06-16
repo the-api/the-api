@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>the-api documentation</title>
+    <meta
+      name="description"
+      content="Documentation for building application APIs with the-api, Hono, PostgreSQL, CRUD definitions, joins, permissions, validation, files, and relations."
+    >
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="brand">
+        <a class="brand-mark" href="#overview" aria-label="the-api docs home">API</a>
+        <div>
+          <strong>the-api</strong>
+          <span>Documentation</span>
+        </div>
+      </div>
+
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar">
+        Menu
+      </button>
+
+      <div class="topbar-actions">
+        <span class="version-pill">v22.11.8</span>
+        <a class="quiet-link" href="../AGENTS.md">AGENTS.md</a>
+        <a class="quiet-link" href="../README.md">README.md</a>
+      </div>
+    </header>
+
+    <div class="docs-shell">
+      <aside class="sidebar" id="sidebar">
+        <label class="search-label" for="doc-search">Search docs</label>
+        <input id="doc-search" class="search-input" type="search" placeholder="Search CRUD, joins, files..." autocomplete="off">
+        <nav class="side-nav" aria-label="Main documentation">
+          <a href="#overview">Overview</a>
+          <a href="#prerequisites">Prerequisites</a>
+          <a href="#install">Install</a>
+          <a href="#schema">Example tables</a>
+          <a href="#quickstart">Quickstart</a>
+          <a href="#crud">CRUD endpoints</a>
+          <a href="#queries">Query parameters</a>
+          <a href="#joins">Joins</a>
+          <a href="#fields">Fields</a>
+          <a href="#permissions">Permissions</a>
+          <a href="#validation">Validation</a>
+          <a href="#errors">Errors</a>
+          <a href="#files">Files</a>
+          <a href="#relations">Relations</a>
+          <a href="#context">Request context</a>
+          <a href="#middleware">Middleware</a>
+          <a href="#reference">Reference</a>
+          <a href="#testing">Testing</a>
+        </nav>
+      </aside>
+
+      <main id="main" class="content">
+        <section id="overview" class="hero" data-section>
+          <div class="hero-copy">
+            <p class="eyebrow">REST APIs from route definitions</p>
+            <h1>Create application APIs with `the-api`</h1>
+            <p class="lead">
+              `the-api` is a module for building Hono-based REST APIs backed by
+              PostgreSQL. Define tables, joins, validation, permissions, files,
+              and relations once, then get consistent CRUD routes and response
+              envelopes across applications.
+            </p>
+            <div class="hero-actions">
+              <a class="button primary" href="#quickstart">Start building</a>
+              <a class="button secondary" href="#reference">API reference</a>
+            </div>
+          </div>
+
+          <div class="flow-panel" aria-label="the-api request flow">
+            <div class="flow-step">
+              <span>1</span>
+              <strong>Route</strong>
+              <small>Hono + Routings</small>
+            </div>
+            <div class="flow-arrow">-&gt;</div>
+            <div class="flow-step">
+              <span>2</span>
+              <strong>State</strong>
+              <small>body, query, user</small>
+            </div>
+            <div class="flow-arrow">-&gt;</div>
+            <div class="flow-step">
+              <span>3</span>
+              <strong>CRUD</strong>
+              <small>Postgres + Knex</small>
+            </div>
+            <div class="flow-arrow">-&gt;</div>
+            <div class="flow-step">
+              <span>4</span>
+              <strong>Envelope</strong>
+              <small>result, meta, error</small>
+            </div>
+          </div>
+        </section>
+
+        <section id="prerequisites" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Before you start</p>
+            <h2>Prerequisites</h2>
+          </div>
+          <div class="check-grid">
+            <div class="check-item">
+              <strong>Node.js or Bun</strong>
+              <p>Use Node.js 18+ or Bun 1+.</p>
+            </div>
+            <div class="check-item">
+              <strong>PostgreSQL</strong>
+              <p>The database must be running and reachable from the API.</p>
+            </div>
+            <div class="check-item">
+              <strong>`the-api` installed</strong>
+              <p>Install it in each application that uses it as a module.</p>
+            </div>
+            <div class="check-item">
+              <strong>Tables and migrations</strong>
+              <p>Create tables before startup, usually through migrations.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="install" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Install</p>
+            <h2>Package and environment</h2>
+          </div>
+          <div class="two-column">
+            <div>
+              <h3>Install the module</h3>
+              <pre><code class="language-bash">bun add the-api
+
+npm install the-api</code></pre>
+            </div>
+            <div>
+              <h3>Minimal `.env`</h3>
+              <pre><code class="language-env">PORT=7788
+JWT_SECRET=change-me
+JWT_EXPIRES_IN=1h
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_DATABASE=postgres</code></pre>
+            </div>
+          </div>
+          <p class="note">
+            When running on Node.js ESM, keep `"type": "module"` in
+            `package.json`.
+          </p>
+        </section>
+
+        <section id="schema" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Example data model</p>
+            <h2>Tables used in the examples</h2>
+          </div>
+          <p>
+            These examples use `ships`, `categories`, `users`, `images`,
+            `regions`, `lang`, and `ship_owners`. Quoted identifiers preserve
+            camelCase fields in PostgreSQL.
+          </p>
+          <pre><code class="language-sql">CREATE TABLE categories (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL
+);
+
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email TEXT NOT NULL,
+  "companyName" TEXT,
+  roles TEXT[] DEFAULT ARRAY[]::TEXT[]
+);
+
+CREATE TABLE ships (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  "categoryId" INTEGER REFERENCES categories(id),
+  "userId" INTEGER REFERENCES users(id),
+  price NUMERIC,
+  status TEXT DEFAULT 'draft',
+  sold BOOLEAN DEFAULT false,
+  deleted BOOLEAN DEFAULT false,
+  "externalId" TEXT,
+  "externalUrl" TEXT,
+  "timeCreated" TIMESTAMP DEFAULT now(),
+  "timeUpdated" TIMESTAMP,
+  "timeDeleted" TIMESTAMP
+);
+
+CREATE TABLE images (
+  id SERIAL PRIMARY KEY,
+  "shipId" INTEGER REFERENCES ships(id),
+  name TEXT NOT NULL,
+  "originalName" TEXT,
+  path TEXT NOT NULL,
+  "isMain" BOOLEAN DEFAULT false
+);</code></pre>
+        </section>
+
+        <section id="quickstart" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Quickstart</p>
+            <h2>Build the smallest useful API</h2>
+          </div>
+          <pre><code class="language-ts">import { Routings, TheAPI, middlewares } from 'the-api';
+
+const router = new Routings({ migrationDirs: ['./migrations'] });
+
+router.crud({ table: 'ships' });
+
+const theAPI = new TheAPI({
+  routings: [middlewares.common, router],
+});
+
+await theAPI.up();</code></pre>
+
+          <div class="request-response">
+            <div>
+              <h3>Request</h3>
+              <pre><code class="language-bash">curl http://localhost:7788/status</code></pre>
+            </div>
+            <div>
+              <h3>Response</h3>
+              <pre><code class="language-json">{
+  "result": { "ok": 1 },
+  "error": false,
+  "requestTime": 1,
+  "serverTime": "2026-03-05T13:47:54.709Z",
+  "logId": "ab12cd34"
+}</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="crud" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">CRUD</p>
+            <h2>Routes from `router.crud({ table: 'ships' })`</h2>
+          </div>
+          <div class="endpoint-list">
+            <div class="endpoint"><span class="method get">GET</span><code>/ships</code><p>List records.</p></div>
+            <div class="endpoint"><span class="method get">GET</span><code>/ships/:id</code><p>Read one record.</p></div>
+            <div class="endpoint"><span class="method post">POST</span><code>/ships</code><p>Create a record.</p></div>
+            <div class="endpoint"><span class="method patch">PATCH</span><code>/ships/:id</code><p>Update a record.</p></div>
+            <div class="endpoint"><span class="method delete">DELETE</span><code>/ships/:id</code><p>Delete or soft-delete a record.</p></div>
+          </div>
+
+          <div class="request-response">
+            <div>
+              <h3>Create</h3>
+              <pre><code class="language-bash">curl -X POST http://localhost:7788/ships \
+  -H "Content-Type: application/json" \
+  -d '{"name":"North Wind","categoryId":1,"userId":1,"price":1500000}'</code></pre>
+            </div>
+            <div>
+              <h3>Response</h3>
+              <pre><code class="language-json">{
+  "result": {
+    "id": 4,
+    "name": "North Wind",
+    "categoryId": 1,
+    "userId": 1,
+    "price": "1500000",
+    "status": "draft",
+    "sold": false,
+    "deleted": false
+  },
+  "error": false
+}</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="queries" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Query language</p>
+            <h2>Filters, fields, search, sort, and pagination</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Query</th>
+                  <th>Meaning</th>
+                  <th>Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>_fields</code></td><td>Select response fields.</td><td><code>_fields=id,name,price</code></td></tr>
+                <tr><td><code>_sort</code></td><td>Sort ascending or descending.</td><td><code>_sort=-price,-id</code></td></tr>
+                <tr><td><code>_limit</code>, <code>_page</code>, <code>_skip</code></td><td>Offset pagination.</td><td><code>_limit=20&amp;_page=2</code></td></tr>
+                <tr><td><code>_after</code></td><td>Cursor pagination.</td><td><code>_after=...</code></td></tr>
+                <tr><td><code>_search</code></td><td>Fuzzy search by `searchFields`.</td><td><code>_search=Auro</code></td></tr>
+                <tr><td><code>field=value</code></td><td>Equality filter.</td><td><code>status=published</code></td></tr>
+                <tr><td><code>field!=value</code></td><td>Not equal.</td><td><code>status!=archived</code></td></tr>
+                <tr><td><code>field~=value</code></td><td>Fuzzy field filter.</td><td><code>name~=Auro</code></td></tr>
+                <tr><td><code>_from_*</code>, <code>_to_*</code></td><td>Range filters.</td><td><code>_from_price=1000000</code></td></tr>
+                <tr><td><code>_in_*</code>, <code>_not_in_*</code></td><td>JSON array membership.</td><td><code>_in_status=["draft","published"]</code></td></tr>
+                <tr><td><code>_null_*</code>, <code>_not_null_*</code></td><td>Null checks.</td><td><code>_null_timeDeleted=true</code></td></tr>
+                <tr><td><code>_join</code></td><td>Enable `joinOnDemand` data.</td><td><code>_join=images</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="request-response">
+            <div>
+              <h3>Request</h3>
+              <pre><code class="language-bash">curl 'http://localhost:7788/ships?_fields=id,name,price&amp;_sort=-price&amp;_limit=1'</code></pre>
+            </div>
+            <div>
+              <h3>Response</h3>
+              <pre><code class="language-json">{
+  "result": [
+    {
+      "id": 2,
+      "name": "Baltic Star",
+      "price": "2200000"
+    }
+  ],
+  "meta": {
+    "total": 2,
+    "limit": 1,
+    "page": 1,
+    "nextPage": 2,
+    "pages": 2
+  },
+  "error": false
+}</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="joins" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Joins</p>
+            <h2>Embed related data</h2>
+          </div>
+          <div class="tabs" data-tabs>
+            <div class="tab-list" role="tablist" aria-label="Join examples">
+              <button type="button" role="tab" aria-selected="true" data-tab="join-basic">Basic join</button>
+              <button type="button" role="tab" aria-selected="false" data-tab="join-fields">Selected fields</button>
+              <button type="button" role="tab" aria-selected="false" data-tab="join-demand">On demand</button>
+            </div>
+            <div class="tab-panel is-active" id="join-basic">
+              <pre><code class="language-ts">router.crud({
+  table: 'ships',
+  join: [
+    {
+      table: 'categories',
+      where: '"categories"."id" = "ships"."categoryId"',
+    },
+  ],
+});</code></pre>
+            </div>
+            <div class="tab-panel" id="join-fields">
+              <pre><code class="language-ts">router.crud({
+  table: 'ships',
+  join: [
+    {
+      table: 'images',
+      where: '"ships"."id" = "images"."shipId"',
+      fields: ['id', 'name', 'originalName', 'path'],
+      orderBy: '"isMain" DESC, "id" ASC',
+      limit: 1,
+    },
+  ],
+});</code></pre>
+            </div>
+            <div class="tab-panel" id="join-demand">
+              <pre><code class="language-ts">router.crud({
+  table: 'ships',
+  joinOnDemand: [
+    {
+      table: 'images',
+      alias: 'images',
+      where: '"ships"."id" = "images"."shipId"',
+      fields: ['id', 'path'],
+    },
+  ],
+});</code></pre>
+              <pre><code class="language-bash">curl 'http://localhost:7788/ships/1?_join=images&amp;_fields=id,name,images'</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="fields" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Fields</p>
+            <h2>Hide, lock, expose, and edit fields by permission</h2>
+          </div>
+          <pre><code class="language-ts">router.crud({
+  table: 'ships',
+  fieldRules: {
+    hidden: ['externalId', 'externalUrl'],
+    readOnly: ['id', 'userId', 'timeCreated', 'timeUpdated', 'deleted', 'status'],
+    visibleFor: {
+      'ships.getInternalInfo': ['externalId', 'externalUrl'],
+    },
+    editableFor: {
+      'ships.editStatus': ['status'],
+    },
+  },
+});</code></pre>
+          <div class="callout">
+            <strong>Strict body whitelists need custom validation.</strong>
+            Automatic validation checks known fields, but it does not reject
+            every unknown body key by itself.
+          </div>
+        </section>
+
+        <section id="permissions" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Roles</p>
+            <h2>Protect CRUD methods</h2>
+          </div>
+          <pre><code class="language-ts">import Roles from 'the-api-roles';
+
+const roles = new Roles({
+  root: ['*'],
+  admin: ['ships.*'],
+  registered: ['ships.get'],
+  guest: ['ships.get'],
+  owner: ['ships.patch', 'ships.delete', 'ships.getInternalInfo'],
+});
+
+router.crud({
+  table: 'ships',
+  permissions: {
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    owner: ['ships.getInternalInfo'],
+  },
+});</code></pre>
+          <p>
+            Permission names use
+            <code>&lt;prefix-or-table&gt;.&lt;methodLowerCase&gt;</code>, for
+            example <code>ships.get</code>, <code>ships.post</code>,
+            <code>ships.patch</code>, and <code>ships.delete</code>. Requests
+            without a token are treated as <code>guest</code>; tokens without
+            <code>roles</code> are not.
+          </p>
+        </section>
+
+        <section id="validation" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Validation</p>
+            <h2>Automatic and custom validation</h2>
+          </div>
+          <p>
+            CRUD validation is generated from PostgreSQL introspection by
+            default. Override or extend it with `validation`.
+          </p>
+          <pre><code class="language-ts">router.crud({
+  table: 'ships',
+  validation: {
+    body: {
+      post: {
+        name: { type: 'string', required: true },
+        categoryId: { type: 'number', required: true },
+        price: { type: 'number', min: 0 },
+      },
+      patch: {
+        price: { type: 'number', min: 0 },
+      },
+    },
+  },
+});</code></pre>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Rule</th><th>Meaning</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>type</code></td><td>`string`, `number`, `boolean`, `date`, `enum`, `array`, `object`, or an array of types.</td></tr>
+                <tr><td><code>required</code></td><td>Field must be present and not empty.</td></tr>
+                <tr><td><code>enum</code></td><td>Allowed values.</td></tr>
+                <tr><td><code>min</code>, <code>max</code></td><td>Numeric bounds.</td></tr>
+                <tr><td><code>preprocess</code></td><td>Transform value before validation.</td></tr>
+                <tr><td><code>items</code>, <code>properties</code></td><td>Nested array/object schemas.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="errors" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Errors</p>
+            <h2>Read and define errors</h2>
+          </div>
+          <div class="request-response">
+            <div>
+              <h3>Register</h3>
+              <pre><code class="language-ts">router.errors({
+  SHIP_ALREADY_SOLD: {
+    code: 1001,
+    status: 409,
+    description: 'Ship is already sold',
+  },
+});
+
+throw new Error('SHIP_ALREADY_SOLD');</code></pre>
+            </div>
+            <div>
+              <h3>Response</h3>
+              <pre><code class="language-json">{
+  "result": {
+    "code": 1001,
+    "status": 409,
+    "description": "Ship is already sold",
+    "name": "SHIP_ALREADY_SOLD",
+    "additional": [],
+    "error": true
+  },
+  "error": true
+}</code></pre>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Error</th><th>Status</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><code>DEFAULT</code></td><td>500</td><td>Unexpected error.</td></tr>
+                <tr><td><code>ACCESS_DENIED</code></td><td>403</td><td>Insufficient permissions.</td></tr>
+                <tr><td><code>NOT_FOUND</code></td><td>404</td><td>No route or result.</td></tr>
+                <tr><td><code>INVALID_TOKEN</code></td><td>401</td><td>JWT verification failed.</td></tr>
+                <tr><td><code>VALIDATION_ERROR</code></td><td>400</td><td>Validation issues in `additional`.</td></tr>
+                <tr><td><code>ERROR_QUERY_VALUE</code></td><td>409</td><td>Wrong query value.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="files" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Files</p>
+            <h2>Local and object-storage uploads</h2>
+          </div>
+          <div class="two-column">
+            <div>
+              <h3>Local</h3>
+              <pre><code class="language-env">FILES_FOLDER=public/files
+IMAGE_SIZES=thumb:200x200,large:1200x800</code></pre>
+            </div>
+            <div>
+              <h3>MinIO or S3-compatible</h3>
+              <pre><code class="language-env">MINIO_ENDPOINT=minio.example.com
+MINIO_PORT=9000
+MINIO_USE_SSL=true
+MINIO_ACCESS_KEY=access-key
+MINIO_SECRET_KEY=secret-key
+MINIO_BUCKET_NAME=prod</code></pre>
+            </div>
+          </div>
+          <pre><code class="language-ts">router.post('/ships/:id/images', async (c) =&gt; {
+  const files = await c.var.files.uploadBody(
+    c.var.body as Record&lt;string, unknown&gt;,
+    `ships/${c.req.param('id')}`,
+    { fields: ['file', 'file[]'], imagesOnly: true },
+  );
+
+  c.set('result', files);
+});
+
+const theAPI = new TheAPI({
+  routings: [middlewares.common, middlewares.files, router],
+});</code></pre>
+        </section>
+
+        <section id="relations" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Relations</p>
+            <h2>Return normalized related data</h2>
+          </div>
+          <pre><code class="language-ts">router.crud({
+  table: 'ships',
+  relations: {
+    categoryId: {
+      table: 'categories',
+      relationIdName: 'id',
+    },
+    userId: {
+      table: 'users',
+      relationIdName: 'id',
+      fieldRules: {
+        hidden: ['email'],
+      },
+    },
+  },
+});</code></pre>
+          <pre><code class="language-json">{
+  "result": [
+    {
+      "id": 1,
+      "name": "Aurora",
+      "categoryId": 1,
+      "userId": 1
+    }
+  ],
+  "relations": {
+    "categoryId": {
+      "1": { "id": 1, "name": "Cargo" }
+    },
+    "userId": {
+      "1": { "id": 1, "companyName": "Blue Ocean Ltd" }
+    }
+  },
+  "error": false
+}</code></pre>
+          <p>
+            Use `join` when related data should be embedded in each result. Use
+            `relations` when clients benefit from normalized, deduplicated data.
+          </p>
+        </section>
+
+        <section id="context" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Request state</p>
+            <h2>What handlers can read from `c.var`</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Value</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><code>db</code>, <code>dbWrite</code></td><td>Knex read/write connections.</td></tr>
+                <tr><td><code>dbTables</code></td><td>Introspected table metadata.</td></tr>
+                <tr><td><code>user</code></td><td>JWT user or guest user.</td></tr>
+                <tr><td><code>body</code>, <code>bodyType</code></td><td>Parsed request body and detected body type.</td></tr>
+                <tr><td><code>query</code></td><td>Normalized query object.</td></tr>
+                <tr><td><code>files</code>, <code>email</code></td><td>Optional services from middleware.</td></tr>
+                <tr><td><code>log</code>, <code>error</code></td><td>Request logger and unified error setter.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <pre><code class="language-ts">router.get('/my-ships', async (c, next) =&gt; {
+  c.var.appendQueryParams({
+    userId: c.var.user.userId as number,
+    deleted: false,
+  });
+  await next();
+});</code></pre>
+        </section>
+
+        <section id="middleware" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Middleware</p>
+            <h2>Built-in and Hono middleware</h2>
+          </div>
+          <pre><code class="language-ts">import {
+  Routings,
+  TheAPI,
+  cors,
+  csrf,
+  compress,
+  etag,
+  bodyLimit,
+  middlewares,
+} from 'the-api';
+
+const theAPI = new TheAPI({
+  routings: [
+    cors(),
+    csrf(),
+    compress(),
+    etag(),
+    bodyLimit({ maxSize: 5 * 1024 * 1024 }),
+    middlewares.common,
+    middlewares.info,
+    middlewares.files,
+    middlewares.email,
+    router,
+  ],
+});</code></pre>
+          <p>
+            `middlewares.common` is `[logs, errors, status]` and is usually
+            placed before application routes.
+          </p>
+        </section>
+
+        <section id="reference" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Reference</p>
+            <h2>Configuration maps</h2>
+          </div>
+          <h3>`TheAPI` options</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Option</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><code>routings</code></td><td>Required list of `Routings` instances or arrays.</td></tr>
+                <tr><td><code>roles</code></td><td>`the-api-roles` instance for route and CRUD checks.</td></tr>
+                <tr><td><code>emailTemplates</code></td><td>Templates used by `middlewares.email`.</td></tr>
+                <tr><td><code>port</code></td><td>Port for `up()` and `upBun()`.</td></tr>
+                <tr><td><code>migrationDirs</code></td><td>Extra Knex migration directories.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>`CrudBuilderOptionsType` essentials</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Option</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><code>table</code></td><td>Database table name. Required.</td></tr>
+                <tr><td><code>prefix</code></td><td>URL and permission prefix instead of table name.</td></tr>
+                <tr><td><code>schema</code></td><td>Database schema.</td></tr>
+                <tr><td><code>aliases</code></td><td>Field aliases in output/input mapping.</td></tr>
+                <tr><td><code>join</code></td><td>Always-loaded joins.</td></tr>
+                <tr><td><code>joinOnDemand</code></td><td>Joins enabled by `_join`.</td></tr>
+                <tr><td><code>searchFields</code></td><td>Fields used by `_search`.</td></tr>
+                <tr><td><code>fieldRules</code></td><td>Hidden, readonly, visible, and editable fields.</td></tr>
+                <tr><td><code>permissions</code></td><td>Protected CRUD methods and owner field permissions.</td></tr>
+                <tr><td><code>defaultWhere</code>, <code>defaultWhereRaw</code></td><td>Permanent filters.</td></tr>
+                <tr><td><code>defaultSort</code>, <code>sortRaw</code></td><td>Default or raw sorting.</td></tr>
+                <tr><td><code>includeDeleted</code>, <code>deletedReplacements</code></td><td>Soft-delete read behavior.</td></tr>
+                <tr><td><code>relations</code>, <code>relationIdName</code></td><td>Normalized relation responses.</td></tr>
+                <tr><td><code>userIdFieldName</code></td><td>Owner field name. Defaults to `userId`.</td></tr>
+                <tr><td><code>validation</code></td><td>Auto/custom params, query, headers, body validation.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Join options</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Option</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><code>table</code>, <code>schema</code></td><td>Joined table and optional schema.</td></tr>
+                <tr><td><code>alias</code>, <code>as</code></td><td>Output key and SQL alias.</td></tr>
+                <tr><td><code>where</code>, <code>whereBindings</code></td><td>Join condition and named binding paths.</td></tr>
+                <tr><td><code>fields</code>, <code>field</code></td><td>Selected object fields or one scalar field.</td></tr>
+                <tr><td><code>orderBy</code>, <code>limit</code>, <code>byIndex</code></td><td>Ordering, limiting, and scalar object selection.</td></tr>
+                <tr><td><code>leftJoin</code></td><td>Extra left join inside this join.</td></tr>
+                <tr><td><code>permission</code></td><td>Permission required for this joined data.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="testing" class="doc-section" data-section>
+          <div class="section-heading">
+            <p class="eyebrow">Project work</p>
+            <h2>Testing and building `the-api`</h2>
+          </div>
+          <pre><code class="language-bash">docker compose -f tests/docker-compose.yml up -d
+bun --env-file=.env.test test
+bun test tests/crud/simple.spec.ts
+bun run build</code></pre>
+          <p>
+            Build output goes to `dist/`. Change `src/`, then run the focused
+            tests and `bun run build`; do not edit `dist/` by hand.
+          </p>
+        </section>
+      </main>
+
+      <aside class="toc" aria-label="On this page">
+        <p>On this page</p>
+        <nav id="toc-links"></nav>
+      </aside>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
