@@ -4,6 +4,7 @@ export declare class Files {
     private bucketName;
     private folder;
     private imageSizes?;
+    private imageNameLengthBytes;
     constructor(options?: FilesOptions);
     upload(file: File | File[], destDir: string): Promise<UploadResultType>;
     delete(objectName: string): Promise<void>;
@@ -29,7 +30,9 @@ export declare class Files {
     private listObjectNames;
     private validateImageSize;
     private isImageBuffer;
-    private getImageNameLengthBytes;
     private generateImageName;
+    private addFileNameToError;
+    private normalizeErrorAdditional;
+    private errorIncludesFileName;
 }
 //# sourceMappingURL=Files.d.ts.map

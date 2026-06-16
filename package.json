@@ -23,7 +23,7 @@
     "pg": "^8.19.0",
     "sharp": "^0.34.5",
     "the-api-roles": "^1.1.2",
-    "the-api-routings": "^0.10.1"
+    "the-api-routings": "^0.10.2"
   },
   "devDependencies": {
     "@types/bun": "^1.3.9",

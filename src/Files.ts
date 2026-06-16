@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as Minio from 'minio';
 import type {
   GetBodyFilesOptionsType,
+  AdditionalMessageType,
   FilesImageSizeType,
   FilesOptions,
   UploadBodyOptionsType,
@@ -292,21 +293,27 @@ export class Files {
     const fullDir = path.join(this.folder, relativeDir);
     await fs.mkdir(fullDir, { recursive: true });
 
-    const sizes = await this.createImageVariants(buffer, imageSizes, async (
-      config,
-      resizedBuffer,
-      info,
-    ) => {
-      const destPath = path.join(fullDir, `${config.name}.webp`);
-      await fs.writeFile(destPath, resizedBuffer);
+    let sizes: Record<string, UploadImageSizeResultType>;
 
-      return {
-        path: destPath,
-        width: info.width,
-        height: info.height,
-        size: info.size,
-      };
-    });
+    try {
+      sizes = await this.createImageVariants(buffer, imageSizes, async (
+        config,
+        resizedBuffer,
+        info,
+      ) => {
+        const destPath = path.join(fullDir, `${config.name}.webp`);
+        await fs.writeFile(destPath, resizedBuffer);
+
+        return {
+          path: destPath,
+          width: info.width,
+          height: info.height,
+          size: info.size,
+        };
+      });
+    } catch (error) {
+      throw this.addFileNameToError(error, file.name);
+    }
 
     return {
       fullPath: fullDir,
@@ -332,28 +339,34 @@ export class Files {
       imageName,
     );
 
-    const sizes = await this.createImageVariants(buffer, imageSizes, async (
-      config,
-      resizedBuffer,
-      info,
-    ) => {
-      const objectName = path.posix.join(objectDir, `${config.name}.webp`);
+    let sizes: Record<string, UploadImageSizeResultType>;
 
-      await this.minioClient!.putObject(
-        this.bucketName,
-        objectName,
+    try {
+      sizes = await this.createImageVariants(buffer, imageSizes, async (
+        config,
         resizedBuffer,
-        resizedBuffer.byteLength,
-        { 'Content-Type': 'image/webp' },
-      );
+        info,
+      ) => {
+        const objectName = path.posix.join(objectDir, `${config.name}.webp`);
 
-      return {
-        path: objectName,
-        width: info.width,
-        height: info.height,
-        size: info.size,
-      };
-    });
+        await this.minioClient!.putObject(
+          this.bucketName,
+          objectName,
+          resizedBuffer,
+          resizedBuffer.byteLength,
+          { 'Content-Type': 'image/webp' },
+        );
+
+        return {
+          path: objectName,
+          width: info.width,
+          height: info.height,
+          size: info.size,
+        };
+      });
+    } catch (error) {
+      throw this.addFileNameToError(error, file.name);
+    }
 
     return {
       fullPath: objectDir,
@@ -504,5 +517,56 @@ export class Files {
 
   private generateImageName(): string {
     return randomBytes(this.imageNameLengthBytes).toString('hex');
+  }
+
+  private addFileNameToError(error: unknown, fileName: string): Error {
+    const err = error instanceof Error ? error : new Error(String(error));
+
+    if (this.errorIncludesFileName(err, fileName)) {
+      return err;
+    }
+
+    const currentAdditional = (err as { additional?: unknown }).additional;
+    const fileAdditional = {
+      message: `File failed: ${fileName}`,
+      fileName,
+    };
+
+    (err as { additional?: unknown }).additional = Array.isArray(currentAdditional)
+      ? [...currentAdditional, fileAdditional]
+      : [
+          ...this.normalizeErrorAdditional(currentAdditional),
+          fileAdditional,
+        ];
+
+    return err;
+  }
+
+  private normalizeErrorAdditional(additional: unknown): AdditionalMessageType[] {
+    if (typeof additional === 'undefined') {
+      return [];
+    }
+
+    if (typeof additional === 'string') {
+      return additional.trim() ? [{ message: additional.trim() }] : [];
+    }
+
+    if (additional && typeof additional === 'object') {
+      const record = additional as Record<string, unknown>;
+      return [{
+        ...record,
+        message: typeof record.message === 'string'
+          ? record.message
+          : JSON.stringify(record),
+      }];
+    }
+
+    return [];
+  }
+
+  private errorIncludesFileName(error: Error, fileName: string): boolean {
+    const additional = (error as { additional?: unknown }).additional;
+    return error.message.includes(fileName)
+      || JSON.stringify(additional ?? '').includes(fileName);
   }
 }

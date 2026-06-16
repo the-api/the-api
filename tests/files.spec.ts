@@ -188,6 +188,44 @@ describe('files', () => {
     }
   });
 
+  test('POST /upload_image includes original file name in additional when image processing fails', async () => {
+    const previousImageSizes = process.env.IMAGE_SIZES;
+
+    process.env.IMAGE_SIZES = 'small:200x150';
+
+    try {
+      const imageBuffer = await sharp({
+        create: {
+          width: 100,
+          height: 100,
+          channels: 3,
+          background: { r: 24, g: 87, b: 161 },
+        },
+      })
+        .jpeg()
+        .toBuffer();
+      const truncatedJpeg = imageBuffer.subarray(0, imageBuffer.length - 2);
+      const file = new File([truncatedJpeg], 'broken-source.jpg', { type: 'image/jpeg' });
+
+      const response = await client.postFormRequest('/upload_image', { file });
+      const json = await response.json();
+      const additional = json.result.additional as Array<Record<string, unknown>>;
+
+      expect(json.result.error).toEqual(true);
+      expect(json.result.name).toContain('VipsJpeg');
+      expect(additional).toContainEqual({
+        message: 'File failed: broken-source.jpg',
+        fileName: 'broken-source.jpg',
+      });
+    } finally {
+      if (previousImageSizes === undefined) {
+        delete process.env.IMAGE_SIZES;
+      } else {
+        process.env.IMAGE_SIZES = previousImageSizes;
+      }
+    }
+  });
+
   test('POST /upload_many_images uses body helpers and DELETE /upload_image/:name removes image set', async () => {
     const previousImageSizes = process.env.IMAGE_SIZES;
 
