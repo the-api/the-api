@@ -1,6 +1,7 @@
 # the-api
 
 - [the-api](#the-api)
+  - [Related packages](#related-packages)
   - [Examples](#examples)
     - [Request and response](#request-and-response)
     - [DB + CRUD example](#db--crud-example)
@@ -45,6 +46,17 @@
     - [Delete route](#delete-route)
   - [Files](#files)
   - [TestClient For Integration Tests](#testclient-for-integration-tests)
+
+## Related packages
+
+`the-api` can be extended with companion packages for common application
+features. Their AGENTS docs are useful quick references when building with the
+ecosystem:
+
+- [`the-api-users`](https://github.com/the-api/the-api-users/blob/main/AGENTS.md) - user and authentication flows.
+- [`the-api-langs`](https://github.com/the-api/the-api-langs/blob/main/AGENTS.md) - language and translation helpers.
+- [`the-api-roles`](https://github.com/the-api/the-api-roles/blob/main/AGENTS.md) - roles and permission checks.
+- [`the-api-routings`](https://github.com/the-api/the-api-routings/blob/main/AGENTS.md) - CRUD routing and query builder behavior.
 
 ## Examples
 

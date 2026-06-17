@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Related packages
+
+`the-api` has companion packages for common application features. Check their
+AGENTS docs when a task touches those areas:
+
+- [`the-api-users`](https://github.com/the-api/the-api-users/blob/main/AGENTS.md) - user and authentication flows.
+- [`the-api-langs`](https://github.com/the-api/the-api-langs/blob/main/AGENTS.md) - language and translation helpers.
+- [`the-api-roles`](https://github.com/the-api/the-api-roles/blob/main/AGENTS.md) - roles and permission checks.
+- [`the-api-routings`](https://github.com/the-api/the-api-routings/blob/main/AGENTS.md) - CRUD routing and query builder behavior.
+
 ## Start here: what the user must have
 
 Before using `the-api` in an application, the user needs:
