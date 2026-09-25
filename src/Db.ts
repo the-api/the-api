@@ -28,7 +28,6 @@ export class Db {
   public dbWrite: Knex;
   public dbTables: DbTablesType = {};
   private migrationDirs: string[];
-  private intervalDbCheck?: Timer;
 
   constructor(options?: DbOptionsType) {
     const { migrationDirs = [] } = options || {};
@@ -83,38 +82,36 @@ export class Db {
   }
 
   async waitDb(): Promise<void> {
-    return new Promise((resolve) => {
-      this.intervalDbCheck = setInterval(
-        () => this.checkDb().then(resolve),
-        5000,
-      );
-      this.checkDb().then(resolve);
-    });
+    while (true) {
+      try {
+        await this.db.raw('select 1+1 as result');
+        await this.dbWrite.raw('select 1+1 as result');
+        break;
+      } catch (err) {
+        console.log('DB connection error:', err, 'waiting for 5 seconds...');
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+    }
+
+    await this.checkDb();
   }
 
   async checkDb(): Promise<void> {
-    try {
-      await this.db.raw('select 1+1 as result');
-      await this.dbWrite.raw('select 1+1 as result');
-      clearInterval(this.intervalDbCheck);
-      console.log('DB connected');
+    console.log('DB connected');
 
-      const migrationSource = new FsMigrations(this.migrationDirs, false);
-      await this.dbWrite.migrate.latest({ migrationSource });
-      console.log('Migration done');
+    const migrationSource = new FsMigrations(this.migrationDirs, false);
+    await this.dbWrite.migrate.latest({ migrationSource });
+    console.log('Migration done');
 
-      const thresholdRaw = Number(
-        process.env.DB_TRGM_SIMILARITY_THRESHOLD ?? 0.1,
-      );
-      const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 0.1;
-      await this.db.raw(`SET pg_trgm.similarity_threshold = ${threshold}`);
-      await this.dbWrite.raw(`SET pg_trgm.similarity_threshold = ${threshold}`);
+    const thresholdRaw = Number(
+      process.env.DB_TRGM_SIMILARITY_THRESHOLD ?? 0.1,
+    );
+    const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 0.1;
+    await this.db.raw(`SET pg_trgm.similarity_threshold = ${threshold}`);
+    await this.dbWrite.raw(`SET pg_trgm.similarity_threshold = ${threshold}`);
 
-      this.dbTables = await this.introspectTables(this.dbWrite);
-      console.log(`Tables found: ${Object.keys(this.dbTables)}`);
-    } catch (err) {
-      console.log('DB connection error:', err, 'waiting for 5 seconds...');
-    }
+    this.dbTables = await this.introspectTables(this.dbWrite);
+    console.log(`Tables found: ${Object.keys(this.dbTables)}`);
   }
 
   async destroy(): Promise<void> {

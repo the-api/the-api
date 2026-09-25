@@ -41738,6 +41738,7 @@ class CrudBuilder {
   requiredFields;
   defaultWhere;
   defaultWhereRaw;
+  defaultWhereRawBindings;
   defaultSort;
   sortRaw;
   fieldsRaw;
@@ -41748,6 +41749,7 @@ class CrudBuilder {
   accessByStatuses;
   deletedReplacements;
   includeDeleted;
+  visibleFields;
   hiddenFields;
   readOnlyFields;
   showFieldsByPermission;
@@ -41773,6 +41775,7 @@ class CrudBuilder {
     this.requiredFields = options.requiredFields || {};
     this.defaultWhere = options.defaultWhere || {};
     this.defaultWhereRaw = options.defaultWhereRaw;
+    this.defaultWhereRawBindings = options.defaultWhereRawBindings;
     this.defaultSort = options.defaultSort;
     this.sortRaw = options.sortRaw;
     this.fieldsRaw = options.fieldsRaw;
@@ -41783,6 +41786,7 @@ class CrudBuilder {
     this.accessByStatuses = options.accessByStatuses || {};
     this.deletedReplacements = options.deletedReplacements;
     this.includeDeleted = typeof options.includeDeleted === "boolean" ? options.includeDeleted : !!options.deletedReplacements;
+    this.visibleFields = options.fields;
     this.hiddenFields = options.hiddenFields || [];
     this.readOnlyFields = options.readOnlyFields || ["id", "timeCreated", "timeUpdated", "timeDeleted", "isDeleted"];
     this.showFieldsByPermission = options.permissions?.fields?.viewable || {};
@@ -41828,6 +41832,39 @@ class CrudBuilder {
   }
   getCurrentUserId() {
     return this.state.user?.userId ?? this.state.user?.id;
+  }
+  resolveContextBindings(c, bindingPaths) {
+    if (!bindingPaths)
+      return {};
+    const env = {
+      ...c.env,
+      ...c.var
+    };
+    ["db", "dbWrite", "dbTables", "error", "getErrorByMessage", "log"].forEach((key) => delete env[key]);
+    const flattened = flattening({
+      env,
+      params: c.req.param(),
+      query: this.getSingleValueQuery(c)
+    });
+    return Object.entries(bindingPaths).reduce((bindings, [name, path]) => {
+      bindings[name] = flattened[path] ?? null;
+      return bindings;
+    }, {});
+  }
+  applyDefaultWhere(c, db) {
+    this.where(this.defaultWhere, db, { trusted: true });
+    if (!this.defaultWhereRaw)
+      return;
+    const whereStr = this.defaultWhereRaw;
+    const bindingPaths = this.defaultWhereRawBindings;
+    const bindings = this.resolveContextBindings(c, bindingPaths);
+    this.state.res.andWhere(function() {
+      if (bindingPaths) {
+        this.whereRaw(whereStr, bindings);
+      } else {
+        this.whereRaw(whereStr);
+      }
+    });
   }
   getDbWithSchema(db) {
     const qb = db(this.table);
@@ -42090,23 +42127,7 @@ class CrudBuilder {
       const ff = joinFields?.map((item) => typeof item === "string" ? `'${item}', "${as || table}"."${item}"` : `'${Object.keys(item)[0]}', ${Object.values(item)[0]}`);
       const f2 = ff ? `json_build_object(${ff.join(", ")})` : `"${as || table}".*`;
       const f3 = field || `jsonb_agg(${f2})`;
-      const wb = {};
-      const flatQuery2 = this.getSingleValueQuery(c);
-      if (whereBindings) {
-        const envAll = {
-          ...c.env,
-          ...c.var
-        };
-        ["db", "dbWrite", "dbTables", "error", "getErrorByMessage", "log"].forEach((key) => delete envAll[key]);
-        const dd = flattening({
-          env: envAll,
-          params: c.req.param(),
-          query: flatQuery2
-        });
-        for (const [k, v] of Object.entries(whereBindings)) {
-          wb[k] = dd[v] ?? null;
-        }
-      }
+      const wb = this.resolveContextBindings(c, whereBindings);
       const leftJoinStr = !leftJoin ? "" : typeof leftJoin === "string" ? `LEFT JOIN ${leftJoin}` : `LEFT JOIN "${leftJoin[0]}" ON ${leftJoin[1]} = ${leftJoin[2]}`;
       const index = typeof byIndex === "number" ? `[${byIndex}]` : "";
       const schemaStr = !schema ? "" : `"${schema}".`;
@@ -42185,6 +42206,15 @@ class CrudBuilder {
     const fields = hiddenFields[isOwner ? "owner" : "regular"];
     for (const key of fields)
       delete result[key];
+  }
+  deleteNonVisibleFieldsFromResult(result) {
+    if (!result || !this.visibleFields)
+      return;
+    const visibleFields = new Set(this.visibleFields);
+    for (const key of Object.keys(result)) {
+      if (!visibleFields.has(key))
+        delete result[key];
+    }
   }
   filterDataByTableColumns(data, rows) {
     const filtered = {};
@@ -42343,14 +42373,8 @@ class CrudBuilder {
     if (_lang)
       this.state.lang = _lang;
     this.fields({ c, _fields, _join, db, _sort });
-    this.where(this.defaultWhere, db, { trusted: true });
+    this.applyDefaultWhere(c, db);
     this.where(where, db);
-    if (this.defaultWhereRaw) {
-      const whereStr = this.defaultWhereRaw;
-      this.state.res.andWhere(function() {
-        this.whereRaw(whereStr);
-      });
-    }
     if (_search && this.searchFields.length) {
       const whereStr = this.searchFields.map((name) => {
         const searchName = this.state.langJoin[name] || `"${name}"`;
@@ -42416,6 +42440,7 @@ class CrudBuilder {
     const hiddenFields = this.getHiddenFields();
     for (const row of result) {
       this.deleteHiddenFieldsFromResult(row, hiddenFields);
+      this.deleteNonVisibleFieldsFromResult(row);
     }
     return { result, meta };
   }
@@ -42441,17 +42466,13 @@ class CrudBuilder {
     if (this.dbTables?.id?.data_type === "integer" && Number.isNaN(+id)) {
       throw new Error("INTEGER_REQUIRED");
     }
-    this.where({ ...where, [`${this.table}.id`]: id }, db, { trusted: true });
-    if (this.defaultWhereRaw) {
-      const whereStr = this.defaultWhereRaw;
-      this.state.res.andWhere(function() {
-        this.whereRaw(whereStr);
-      });
-    }
-    this.checkDeleted();
     this.fields({ c, _fields, _join, db });
+    this.where({ ...where, [`${this.table}.id`]: id }, db, { trusted: true });
+    this.applyDefaultWhere(c, db);
+    this.checkDeleted();
     const result = await this.state.res.first();
     this.deleteHiddenFieldsFromResult(result, this.getHiddenFields());
+    this.deleteNonVisibleFieldsFromResult(result);
     c.set("result", result);
     c.set("relationsData", this.relations);
   }
@@ -43983,7 +44004,6 @@ class Db {
   dbWrite;
   dbTables = {};
   migrationDirs;
-  intervalDbCheck;
   constructor(options) {
     const { migrationDirs = [] } = options || {};
     const connection = {
@@ -44023,29 +44043,29 @@ class Db {
     });
   }
   async waitDb() {
-    return new Promise((resolve) => {
-      this.intervalDbCheck = setInterval(() => this.checkDb().then(resolve), 5000);
-      this.checkDb().then(resolve);
-    });
+    while (true) {
+      try {
+        await this.db.raw("select 1+1 as result");
+        await this.dbWrite.raw("select 1+1 as result");
+        break;
+      } catch (err) {
+        console.log("DB connection error:", err, "waiting for 5 seconds...");
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+    }
+    await this.checkDb();
   }
   async checkDb() {
-    try {
-      await this.db.raw("select 1+1 as result");
-      await this.dbWrite.raw("select 1+1 as result");
-      clearInterval(this.intervalDbCheck);
-      console.log("DB connected");
-      const migrationSource = new FsMigrations(this.migrationDirs, false);
-      await this.dbWrite.migrate.latest({ migrationSource });
-      console.log("Migration done");
-      const thresholdRaw = Number(process.env.DB_TRGM_SIMILARITY_THRESHOLD ?? 0.1);
-      const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 0.1;
-      await this.db.raw(`SET pg_trgm.similarity_threshold = ${threshold}`);
-      await this.dbWrite.raw(`SET pg_trgm.similarity_threshold = ${threshold}`);
-      this.dbTables = await this.introspectTables(this.dbWrite);
-      console.log(`Tables found: ${Object.keys(this.dbTables)}`);
-    } catch (err) {
-      console.log("DB connection error:", err, "waiting for 5 seconds...");
-    }
+    console.log("DB connected");
+    const migrationSource = new FsMigrations(this.migrationDirs, false);
+    await this.dbWrite.migrate.latest({ migrationSource });
+    console.log("Migration done");
+    const thresholdRaw = Number(process.env.DB_TRGM_SIMILARITY_THRESHOLD ?? 0.1);
+    const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 0.1;
+    await this.db.raw(`SET pg_trgm.similarity_threshold = ${threshold}`);
+    await this.dbWrite.raw(`SET pg_trgm.similarity_threshold = ${threshold}`);
+    this.dbTables = await this.introspectTables(this.dbWrite);
+    console.log(`Tables found: ${Object.keys(this.dbTables)}`);
   }
   async destroy() {
     await this.db.destroy();
@@ -52233,6 +52253,8 @@ class Files {
   }
   async upload(file, destDir) {
     const normalizedFile = this.normalizeFile(file);
+    this.assertSafeRelativePath(destDir);
+    this.assertSafeFileName(normalizedFile.name);
     const buffer = Buffer.from(await normalizedFile.arrayBuffer());
     const imageSizes = this.getImageSizes();
     if (imageSizes.length) {
@@ -52257,6 +52279,7 @@ class Files {
   async delete(objectName) {
     if (this.folder) {
       const fullPath = path2.isAbsolute(objectName) ? objectName : path2.join(this.folder, objectName);
+      this.assertInsideFolder(fullPath);
       const stat2 = await fs3.stat(fullPath);
       if (stat2.isDirectory()) {
         await fs3.rm(fullPath, { recursive: true, force: true });
@@ -52313,6 +52336,8 @@ class Files {
     return this.uploadMany(this.getBodyFiles(body, options), destDir, { imagesOnly: false });
   }
   getImageDir(destDir, imageName) {
+    this.assertSafeRelativePath(destDir);
+    this.assertSafeFileName(imageName);
     const relativeDir = this.getImageRelativeDir(destDir, imageName);
     if (this.folder) {
       return path2.join(this.folder, relativeDir);
@@ -52449,6 +52474,23 @@ class Files {
     }
     return file;
   }
+  assertSafeRelativePath(value) {
+    if (path2.posix.isAbsolute(value) || path2.win32.isAbsolute(value) || value.split(/[\\/]/).some((part) => part === ".." || part === ".") || value.includes("\x00")) {
+      throw new Error("FILES_INVALID_FILE");
+    }
+  }
+  assertSafeFileName(value) {
+    if (!value || value === "." || value === ".." || /[\\/\0]/.test(value)) {
+      throw new Error("FILES_INVALID_FILE");
+    }
+  }
+  assertInsideFolder(value) {
+    const folder = path2.resolve(this.folder);
+    const relative2 = path2.relative(folder, path2.resolve(value));
+    if (!relative2 || relative2 === ".." || relative2.startsWith(`..${path2.sep}`) || path2.isAbsolute(relative2)) {
+      throw new Error("FILES_INVALID_FILE");
+    }
+  }
   collectFiles(value) {
     if (Array.isArray(value)) {
       return value.flatMap((item) => this.collectFiles(item));
@@ -52472,14 +52514,14 @@ class Files {
       return [];
     }
     const stream5 = this.minioClient.listObjectsV2(this.bucketName, prefix, true);
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       const objectNames = [];
       stream5.on("data", (item) => {
         if (item.name)
           objectNames.push(item.name);
       });
       stream5.on("error", reject);
-      stream5.on("end", () => resolve2(objectNames));
+      stream5.on("end", () => resolve3(objectNames));
     });
   }
   validateImageSize(config) {

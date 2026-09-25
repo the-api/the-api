@@ -59,6 +59,8 @@ export class Files {
 
   async upload(file: File | File[], destDir: string): Promise<UploadResultType> {
     const normalizedFile = this.normalizeFile(file);
+    this.assertSafeRelativePath(destDir);
+    this.assertSafeFileName(normalizedFile.name);
     const buffer = Buffer.from(await normalizedFile.arrayBuffer());
     const imageSizes = this.getImageSizes();
 
@@ -92,6 +94,7 @@ export class Files {
       const fullPath = path.isAbsolute(objectName)
         ? objectName
         : path.join(this.folder, objectName);
+      this.assertInsideFolder(fullPath);
       const stat = await fs.stat(fullPath);
 
       if (stat.isDirectory()) {
@@ -194,6 +197,8 @@ export class Files {
   }
 
   getImageDir(destDir: string, imageName: string): string {
+    this.assertSafeRelativePath(destDir);
+    this.assertSafeFileName(imageName);
     const relativeDir = this.getImageRelativeDir(destDir, imageName);
 
     if (this.folder) {
@@ -436,6 +441,28 @@ export class Files {
     }
 
     return file;
+  }
+
+  private assertSafeRelativePath(value: string): void {
+    if (path.posix.isAbsolute(value) || path.win32.isAbsolute(value)
+      || value.split(/[\\/]/).some((part) => part === '..' || part === '.')
+      || value.includes('\0')) {
+      throw new Error('FILES_INVALID_FILE');
+    }
+  }
+
+  private assertSafeFileName(value: string): void {
+    if (!value || value === '.' || value === '..' || /[\\/\0]/.test(value)) {
+      throw new Error('FILES_INVALID_FILE');
+    }
+  }
+
+  private assertInsideFolder(value: string): void {
+    const folder = path.resolve(this.folder);
+    const relative = path.relative(folder, path.resolve(value));
+    if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+      throw new Error('FILES_INVALID_FILE');
+    }
   }
 
   private collectFiles(value: unknown): File[] {

@@ -5,7 +5,6 @@ export declare class Db {
     dbWrite: Knex;
     dbTables: DbTablesType;
     private migrationDirs;
-    private intervalDbCheck?;
     constructor(options?: DbOptionsType);
     waitDb(): Promise<void>;
     checkDb(): Promise<void>;

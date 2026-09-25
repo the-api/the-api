@@ -24,6 +24,9 @@ export declare class Files {
     private normalizeFiles;
     private isImageMimeType;
     private normalizeFile;
+    private assertSafeRelativePath;
+    private assertSafeFileName;
+    private assertInsideFolder;
     private collectFiles;
     private isFile;
     private getImageRelativeDir;
